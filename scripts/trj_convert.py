@@ -1,6 +1,5 @@
 from schrodinger.application.desmond.packages import topo, traj, traj_util
-from schrodinger.structure import Structure, PDBWriter
-from schrodinger.structutils import analyze
+from schrodinger.structure import StructureWriter
 import argparse
 
 def main():
@@ -11,13 +10,11 @@ def main():
 
     basename = args.o if args.o else args.cms.split['-out.cms'][0]
 
-    msys, cms, trj = traj_util.read_cms_and_traj(args.cms)
+    _, cms, trj = traj_util.read_cms_and_traj(args.cms)
 
     traj.write_traj(trj, basename + '.xtc', format=traj.Fmt.XTC)
-
-    full_system_indices = analyze.evaluate_asl(cms, 'all')
-    sys_st = cms.extract(full_system_indices)
-    sys_st.write(basename + '.pdb', format='pdb')
+    writer = StructureWriter(basename + '.pdb', format='pdb')
+    writer.write(cms, basename + '.pdb')
 
 if __name__ == "__main__":
     main()

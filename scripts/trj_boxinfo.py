@@ -1,4 +1,3 @@
-#!/opt/schrodinger/suites2019-3/run
 from schrodinger.application.desmond.packages import traj_util
 import numpy as np
 import pandas as pd
@@ -19,7 +18,7 @@ def main():
         box.append([fr.box[0][0], fr.box[1][1], fr.box[2][2]])
 
     df = pd.DataFrame(np.matrix(box))
-    df.to_csv(out_csv, index=False, header=False)
+    df.to_csv(out_csv, index=False, header=['a','b','c'])
 
 if __name__ == "__main__":
     main()

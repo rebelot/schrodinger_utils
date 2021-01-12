@@ -1,6 +1,3 @@
-#!/opt/schrodinger/suites2019-3/run
-# -*- coding: utf-8 -*-
-
 import argparse
 import sys
 

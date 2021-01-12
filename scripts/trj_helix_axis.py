@@ -18,4 +18,6 @@ def main():
         coords_mean = coords.mean(axis=0)
         uu, dd, vv = np.linalg.svd(coords - coords_mean)
 
-
+if __name__ == "__main__":
+    print('not implemented yet')
+    print('Goodbye!')

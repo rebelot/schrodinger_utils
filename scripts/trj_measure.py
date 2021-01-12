@@ -49,4 +49,5 @@ e.g: -e "a.n 10:a.n 20-25:distance" will compute the distance between atoms 10 a
 
 
 if __name__ == "__main__":
-    main()
+    print('Not implemented yet. Goodbye!')
+    # main()

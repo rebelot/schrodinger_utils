@@ -1,5 +1,3 @@
-#!/opt/schrodinger/suites2020-3/run
-
 import argparse
 
 import matplotlib.pyplot as plt
@@ -8,6 +6,7 @@ from schrodinger.application.desmond.packages import topo, traj, traj_util
 from schrodinger.structutils import analyze
 from tqdm import tqdm
 
+#TODO: refactor using analyzers!
 
 def main():
     parser = argparse.ArgumentParser()
