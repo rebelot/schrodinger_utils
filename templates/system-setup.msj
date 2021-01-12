@@ -1,0 +1,104 @@
+task {
+  task = "desmond:auto"
+}
+
+build_geometry {
+
+  # restrain ...
+  # atom_group ...
+
+  # Merge the specified CTs into a single CT, and ignore all other
+  # settings for the stage.
+  only_merge_ct = []
+
+  # Extract the component CTs from a full system CT. All other
+  # settings are ignored.
+  # Valid values are true, false, or a block like:
+  # {
+  # membrane = ASL-expression 
+  # solvent = ASL-expression
+  # }
+  rebuild_cms = false
+
+  # don't change the box size if box information exists in the given
+  # solute CT.
+  preserve_box = false
+
+  box = {
+     # Shape: cubic triclinic orthorombic
+     shape = orthorhombic
+     size = [10.0 10.0 10.0 ]
+     # size_type: buffer absolute
+     size_type = buffer
+  }
+  # box_shape = cubic triclinic orthorombic
+  # buffer_width = 10
+
+  # membrane_box = {
+  #   lipid = POPC
+  # }
+
+  # Reset the origin of the coordinates to the center of mass of the
+  # solutes
+  rezero_system = false
+
+  # Reorient the solute to minimize the volume of the simulation box
+  # when adding solvent molecules
+  minimize_volume = false
+
+  # do not delete the existing ffio_ff blocks in the original CT
+  preserve_ffio = true
+
+  override_forcefield = OPLS3e
+
+  # csb_file = /path/to/input.csb
+
+  add_counterion = {
+     # Br, Ca2, Fe2, Fe3, K, Li, Mg2, Na, Zn2, Rb
+     # Cl, I
+     ion = Na
+     number = neutralize_system
+  }
+
+  salt = {
+     concentration = 0.15
+     negative_ion = Cl
+     positive_ion = Na
+  }
+
+  # Add counter ions to neutralize the system
+  neutralize_system = true
+
+  # move water molecules from solute CT to a separate one
+  distil_solute = true
+
+  # ion_awayfrom: list of atom indexes
+  # ion_awaydistance: Minimum distance between the added ions and atoms specified in ion_awayfrom 
+  # ion_awaydistance
+
+  # Solvate the system
+  solvate_system = true
+
+  # Solvent type. water, SPC, TIP3P, TIP4P, TIP4PEW, methanol, octanol, DMSO.
+  solvent = SPC
+
+}
+
+assign_forcefield {
+  # OPLS_2005, CHARMM, AMBER, amber03, amber99, amber94, amber96, amber99SB,
+  # amber99SB-ILDN, charmm22nocmap, charmm36_lipids, charmm27, charmm32,
+  # oplsaa_ions_Jensen_2006, oplsaa_impact_2001, oplsaa_impact_2005,
+  # oplsaa_impact_2001, oplsaa_impact_2005.
+  forcefield = OPLS3e
+
+  # SPC, SPCE, TIP3P, TIP3P_CHARMM, TIP4P, TIP4PEW, TIP4P2005, TIP5P, none.
+  water = SPC
+
+  # Do not overwrite the existing ffio_ff block in the input.
+  # humble
+}
+
+# command example:
+# $SCHRODINGER/utilities/multisim -HOST <hostname> -JOBNAME system-setup -m system-setup.msj system-setup.mae -o system-setup.cms
+
+

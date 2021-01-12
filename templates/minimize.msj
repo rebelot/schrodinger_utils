@@ -1,0 +1,12 @@
+task {
+  task = "desmond:auto"
+}
+
+minimize {
+   title                  = "minimizzamela"
+   max_steps              = 2000
+   steepest_descent_steps = 10
+   convergence            = 1.0
+   num_vector             = 3
+   # restrain               = { atom = '' force_constant = 0.0 }
+}

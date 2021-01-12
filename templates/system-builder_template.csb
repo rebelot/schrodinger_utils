@@ -1,0 +1,121 @@
+{
+  # Read the input structure
+  read_solute_structure "INPUT.mae"
+
+  # Select forcefield
+  set_oplsaa_version_as 2005, OPLS3e
+  
+  align_principal_axis_with_xyz Yes/No
+  align_principal_axis_with_diagonal Yes/No
+  rezero_to_center_of_mass Yes/No
+
+  # Do not overwrite existing forcefield parameters in the input file
+  remove_solute_ffio no
+
+  # Solvent model:
+  # {acetone, acetonitrile, dmso, imidazole, isoprpanol, methanol,
+  # n-methylacetamide, octanol, pyrimidine,
+  # spc, tip3p, tip4p, tip4pew, tip5p}.box.mae
+
+  solvent_desmond_oplsaa_typer {
+    input_file_name spc.box.mae
+    run
+  }
+
+  # Ions:
+  # positive ions:
+  # {Br, Ca2, Fe2, Fe3, K, Li, Mg2, Na, Zn2, Rb}.mae
+  # negative ions:
+  # {Cl, I}.mae
+
+  # specify the salt model for the `neutralize' or `add_ion' commands.
+  positive_ion_desmond_oplsaa_typer {
+    input_file_name Na.mae
+    run
+  }
+  negative_ion_desmond_oplsaa_typer {
+    input_file_name Cl.mae
+    run
+  }
+
+  # specify the salt model for the `add_salt' command.
+  salt_positive_ion_desmond_oplsaa_typer {
+    input_file_name Na.mae
+    run
+  }
+  salt_negative_ion_desmond_oplsaa_typer {
+    input_file_name Cl.mae
+    run
+  }
+
+  # Add a membrane to the system:
+  # membranize MEMBRANE x-buf y-buf
+  # MEMBRANE can be one of: {POPC, DPPC, DMPC, POPE}.mae.gz
+  # x-buf and y-buf specify the minimum distance between the solute and the box
+  # boundary in the plane of the membrane.
+
+  membranize POPC.mae.gz 10.000000 10.000000
+
+  # boundary conditions:
+  # [create_]boundary_conditions cubic a
+  # [create_]boundary_conditions orthorhombic a b c
+  # [create_]boundary_conditions triclinic a b c alpha beta gamma
+  # with the `create_boundary_conditions' command, box measures are evaluated
+  # as "buffer"; otherwise they are interpreted as "absolute" box sizes.
+
+  create_boundary_conditions orthorhombic 0.000000 0.000000 10.000000
+
+  # add a specified salt concentration 
+  add_salt 0.15
+
+  # alternatively, the following commands may be used to
+  # splecify the number N of ions to be placed
+  #
+  # add_ion positive N
+  # add_ion negative N
+
+  # The `ion_location' keyword can be used to specify the proximity of ions with
+  # reference to certain atoms.
+  # The keyword `ion_location' is followed by the list of solute atom indexes. Ions
+  # are placed near the listed atoms. For each ion, the atom index is given inside
+  # braces. Extra atom index specifications are ignored. If there are fewer atom
+  # index specifications than there are ions, the remaining ion locations are
+  # determined randomly.
+  #
+  # ion_location { { atom1 } { atom2 } }
+
+  # In order to exclude ions near certain atoms, the `exclude_ion_from' keyword can
+  # be used.
+  # The keyword `exclude_ion_from' has two arguments. The first argument is a list of
+  # atom indices of solute atoms, in braces. The second argument is the distance
+  # value. No ion, whether a single ion or from a salt, is placed within the given
+  # distance in angstroms from the listed atoms.
+  #
+  # exclude_ion_from { atom-list } distance
+
+  # neutralize the system charge
+  neutralize
+
+  # initiate the solvation of the current solute structure, which includes the
+  # ions and the membrane.
+  solvate
+
+  # write system to output file
+  write_mae_file "OUTPUT.cms"
+}
+
+# run the system_builder:
+# $SCHRODINGER/utilities/system_builder config.csb
+#
+# Options:
+#   -j <jobname>     - Jobname for this job (default is based on input file)
+# 
+#   -HOST <hostname> - Remote hostname for this job (default is localhost)
+#   -LOCAL           - Run in the local directory (remote host only)
+#   -WAIT            - Do not return until the job completes.
+#   -SAVE            - Do not delete the tmpdir after the job completes.
+#   -NOJOBID         - Run the without jobcontrol.
+#   -DEBUG           - Show details of operation of the toplevel scripts.
+#   -h or -help      - Print this message and exit.
+#   -rezero          - Translate the center of input structures to the origin.
+#   -minimize_volume - Minimize the system volume.

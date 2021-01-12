@@ -1,0 +1,157 @@
+task {
+  task = "desmond:auto"
+}
+
+simulate {
+  title        = "Your Amazing MD"
+
+  # TIME
+  time         = 1.2
+  elapsed_time = 0.0
+  timestep     = [0.002 0.002 0.006]
+
+  # NONBONDED
+  cutoff_radius = 9.0
+  taper = { # on off
+    method = potential  # potential, c1switch, c2switch, shift
+    width  = 0.0
+  }
+  coulomb_method = pme  # cutoff [pme 1E-9]
+
+  # TEMPERATURE
+  annealing = off 
+  temperature = 300.0
+  # [[temp1 group-index1] [temp2 group-index2] ...]
+  # [[temp1 time-point1] [temp2 time-point2] ...] --> annealing must be set accordingly
+
+  # PRESSURE
+  pressure = [1.01325 anisotropic]  # anisotropic
+  surface_tension = 4E3  # ignored unless NPgT
+
+  # ENSEMBLE
+  ensemble = {
+    class = "NPT" # NPT, NVT, NVE, NPgT, NPAT, NPT_Ber, NVT_Ber, NPT_L, NVT_L
+    method = "Brownie" # MTK Langeving NH Berendsen
+    brownie.delta_max = 0.1
+    barostat.tau = 1
+    thermostat.tau = 2
+  }
+
+  # MISC
+  glue = solute  # requires periodicfix=true 
+
+  # VELOCITY
+  randomize_velocity = {
+    first       = 0.0
+    interval    = inf
+    seed        = 2007
+    temperature = '@*.temperature'
+  }  
+
+  # OUTPUT
+  trajectory = {
+    name            = "$JOBNAME$[_replica$REPLICA$]_trj"
+    first           = 0.0
+    interval        = 4.8
+    periodicfix     = true
+    write_velocity  = false
+    frames_per_file = 25
+    # center          = solute | []
+    # total frames = (time - elapsed_time / interval)
+  }
+  eneseq = {
+    name     = "$JOBNAME$[_replica$REPLICA$].ene"
+    first    = 0.0
+    interval = 1.2
+    precision = 9
+  }
+  checkpt = {
+    name     = "$JOBNAME.cpt"
+    first    = 0.0
+    interval = 240.0
+    # wall_interval = 2000.0
+    write_last_step = yes
+  }
+  maeff_output = {
+    name      = "$JOBNAME$[_replica$REPLICA$]-out.cms"
+    trjidx    = "$JOBNAME$[_replica$REPLICA$]-out.idx"
+    first     = 0.0
+    interval  = 120.0
+    precision = 8
+  }
+  energy_group = {
+    name     = "$JOBNAME$[_replica$REPLICA$]_enegrp.dat"
+    first    = 0.0
+    interval = 1.2
+    self_energy = false
+    corr_energy = true
+  }
+  simbox = {
+    name     = "$JOBNAME$[_replica$REPLICA$]_simbox.dat"
+    first    = 0.0
+    interval = 1.2
+  }
+
+  # RESTRAIN
+  # none retain
+  # { atom = heavy_atom | solute | solute_heavy_atom | solvent | solvent_heavy_atom | "asl: ..." 
+  #   force_constant = value | [x, y, z]
+  #   generator = "alpha_helix"
+  #   reference_position = retain|reset|refvalue
+  #   sigma = sigmavalue } 
+  restrain = {atom = "asl: all" force_constant = 50.0}
+  # RESTRAIN SCHEDULING
+  backend = {
+    mdsim = {
+      plugin.posre_schedule = {
+        type = posre_schedule
+        schedule = {
+          time = [0 50 100]
+          value = [1.0 0.5 0.0]
+        }
+      }
+      plugin.list = ['!append!' posre_schedule]
+    }
+    # GAUSSIAN POTENTIAL
+    force.term = {
+      list = [GaussianForce]
+      GaussianForce={
+          type = GaussianForce
+          grp_energy = [1]
+          mu = [0.0]
+          sigma = [5]
+          A = [2.0]
+      }
+    }
+  }
+    # BIASINGFORCE
+    atom_group = [
+        { atom = "asl:a.pt CA"
+        index = 1
+        name = cm_moi
+        }
+        { atom = "asl:a.e P and r.pt POPC"
+        index = 2
+        name = cm_moi
+        }
+    ]
+    backend = {
+        force.term = {
+            list = [ BiasingForce]
+            BiasingForce = {
+                type = BiasingForce
+                cm_moi = [ {
+                    groups = [1 2]
+                    distance = 25
+                    distance_coeff = 10
+                } ]
+                output = {
+                    first = 0.0
+                    interval = 100.0
+                    name = "$JOBNAME.bforce"
+                }
+            }
+        }
+    }
+}
+
