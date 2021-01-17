@@ -36,7 +36,6 @@ def main():
     else:
         slicer = slice(None)
 
-
     rmsd_asl = args.rmsd
     rmsd_aids = cms.select_atom(rmsd_asl)
     rmsd_Atoms = list(analyze.get_atoms_from_asl(cms, rmsd_asl))
@@ -62,7 +61,7 @@ def main():
 
     if mode == 'rmsd':
         for fr, r in zip(trj[slicer], res):
-            fh.write(f"{fr.time} {r}\n")
+            fh.write(f"{fr.time/1000.0} {r}\n")
     else:
         for a, r in zip(rmsd_Atoms, res):
             fh.write(f"{a.index} {a.resnum} {r}\n")
