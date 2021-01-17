@@ -74,7 +74,7 @@ def write_em(fh, em, keys, times):
 
 def write_allbonds(fh, all_bonds, times):
     for t, bond_num in zip(times, all_bonds):
-        fh.write(f'{t},{bond_num}\n')
+        fh.write(f'{t} {bond_num}\n')
 
 def main():
     parser = argparse.ArgumentParser(
