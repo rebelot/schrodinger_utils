@@ -17,7 +17,7 @@ class Residue:
 
 
 def aid2info(aid, atoms):
-    atom = atoms[aid]
+    atom = atoms[aid - 1]
     return Residue(atom.resnum, atom.pdbres.strip(), atom.chain)
 
 
