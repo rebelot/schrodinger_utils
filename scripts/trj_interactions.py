@@ -157,6 +157,7 @@ def main():
     parser.add_argument('-r', help="Filter results at residue level (alias for '-rkey 0,3[,0,3])", action="store_true")
     parser.add_argument("-b", help="comma-separated list of interaction types to compute:\
             default is hb,sb,pipi,catpi", default='hb,sb,pipi,catpi')
+    parser.add_argument("-th", help="only report the existence of bonds with an existence % above N", metavar='N', type=float)
     # parser.add_argument("-em", help="output indexed existence map", action="store_true")
     parser.add_argument('-s', help='slice trajectory', metavar='START:END:STEP', default='::')
 
@@ -207,8 +208,14 @@ def main():
         em, keys = InterOut.existence_map(bonddict)
         allbonds = InterOut.count_bonds()
 
-        fh_allbonds = open(args.out + f'_{btype}-ab.dat', 'w')
-        fh_em = open(args.out + f'_{btype}-em.dat', 'w')
+        if args.th:
+            existence = em.mean(axis=1)
+            indexes = np.nonzero(existence * 100 >= args.th)[0]
+            em, keys = em[indexes, :], [keys[i] for i in indexes]
+
+
+        fh_allbonds = open(args.out + f'_{btype}-ab.csv', 'w')
+        fh_em = open(args.out + f'_{btype}-em.csv', 'w')
         fh_summary = open(args.out + f'_{btype}.txt', 'w')
 
         write_summary(fh_summary, em, keys)
