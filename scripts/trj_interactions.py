@@ -196,9 +196,13 @@ def main():
 
     out = analysis.analyze(trj, *analyzers)
 
-    rkeys = [int(j) if int(j) != 0 else None for i in args.rkey for j in i.split(',')]
-    assert len(rkeys) == 2 or len(rkeys) == 4
-    rkeys[2:4] = rkeys[:3] if (len(rkeys) == 2 and not args.g2) else rkeys[2:4]
+    if args.rkey:
+        rkeys = [int(j) if int(j) != 0 else None for i in args.rkey for j in i.split(',')]
+        assert len(rkeys) == 2 or len(rkeys) == 4
+        rkeys[2:4] = rkeys[:3] if (len(rkeys) == 2 and not args.g2) else rkeys[2:4]
+    else:
+        rkeys = [0,None,0,None]
+
     if args.r:
         rkeys = [0,3,0,3]
 
