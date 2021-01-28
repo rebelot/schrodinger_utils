@@ -130,13 +130,15 @@ def write_summary(fh, em, keys, btype, args):
               " ".join([str(i) for i in key[1]]),
               f'{row.mean():.2%}'] for key, row in zip(keys, em)]
     table = tabulate(reversed(tdata), headers=(args.g1, args.g2, '%'))
+
+
     if btype == 'HB':
         string = 'H-Bonds'
     elif btype == 'SB':
         string = "Salt Bridges"
-    elif btype == 'PP':
+    elif btype == 'PiPi':
         string = 'Pi-Pi interactions'
-    else:
+    else:  # CatPi
         string = 'Pi-Cation interactions'
     fh.write(f'{args.out} {string} summary.\n')
     fh.write(table)
