@@ -125,11 +125,20 @@ def write_allbonds(fh, all_bonds, times):
         fh.write(f'{t} {bond_num}\n')
 
 
-def write_summary(fh, em, keys):
+def write_summary(fh, em, keys, btype, args):
     tdata = [[" ".join([str(i) for i in key[0]]),
               " ".join([str(i) for i in key[1]]),
               f'{row.mean():.2%}'] for key, row in zip(keys, em)]
-    table = tabulate(reversed(tdata), headers=('Group 1', 'Group 2', '%'))
+    table = tabulate(reversed(tdata), headers=(args.g1, args.g2, '%'))
+    if btype == 'HB':
+        string = 'H-Bonds'
+    elif btype == 'SB':
+        string = "Salt Bridges"
+    elif btype == 'PP':
+        string = 'Pi-Pi interactions'
+    else:
+        string = 'Pi-Cation interactions'
+    fh.write(f'{args.out} {string} summary.')
     fh.write(table)
 
     
@@ -222,7 +231,7 @@ def main():
         fh_em = open(args.out + f'_{btype}-em.csv', 'w')
         fh_summary = open(args.out + f'_{btype}.txt', 'w')
 
-        write_summary(fh_summary, em, keys)
+        write_summary(fh_summary, em, keys, btype, args)
         fh_summary.close()
 
         write_em(fh_em, em, keys, times)
