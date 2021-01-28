@@ -138,9 +138,9 @@ def write_summary(fh, em, keys, btype, args):
         string = 'Pi-Pi interactions'
     else:
         string = 'Pi-Cation interactions'
-    fh.write(f'{args.out} {string} summary.')
+    fh.write(f'{args.out} {string} summary.\n')
     fh.write(table)
-    fh.write('\n')
+    fh.write('\n\n')
 
     
 def bkey2str(key):
