@@ -3,6 +3,7 @@
 
 import sys
 import time
+import datetime
 import re
 import argparse
 
@@ -13,14 +14,18 @@ def loglogfile(LOGFILE, TIME):
     last_line = LOG[-1]
     if re.match('Chemical time:', last_line):
         line = last_line.split()
-        CT = float(line[2])/1000
-        V = float(line[-1])
+        CT = float(line[2])/1000 # ns
+        V = float(line[-1]) # ns/day
+        time_left = datetime.timedelta(days=(TIME - CT) / V) # day
         COMP = CT/TIME
-        SEC_LEFT = round(24 * 3600 * (TIME - CT) / V)
-        DAY = SEC_LEFT / 86400
-        HRS = SEC_LEFT / 2600 % 24
-        MIN = SEC_LEFT % 3600 / 60
-        SEC = SEC_LEFT % 60
+        # SEC_LEFT = round(24 * 3600 * (TIME - CT) / V)
+        DAY = time_left.days
+        HRS, remainder = divmod(time_left.seconds, 60*60)
+        MIN, SEC = divmod(remainder, 60)
+        # DAY = SEC_LEFT / 86400
+        # HRS = SEC_LEFT / 2600 % 24
+        # MIN = SEC_LEFT % 3600 / 60
+        # SEC = SEC_LEFT % 60
         ETA = f'{DAY:02.0f}d:{HRS:02.0f}h:{MIN:02.0f}m:{SEC:02.0f}s'
         print(
             f'Completion: {CT:.2f} of {TIME} ns ({COMP:.2%})  @ {V} ns/day     ETA: {ETA:15s}\r', end='')
