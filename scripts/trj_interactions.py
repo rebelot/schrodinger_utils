@@ -95,6 +95,8 @@ def plot_em(ax, em, keys, btype, times):
         ax.set_title('Pi-Pi Interactions')
     elif btype == 'CatPi':
         ax.set_title('Pi-Cation Interactions')
+    elif btype == 'HPho':
+        ax.set_title('Hydrophobic Interactions')
     # ax.set_ylabel('bond')
 
 
@@ -107,6 +109,8 @@ def plot_allbonds(ax, allbonds, btype, times):
         ax.set_title('Pi-Pi Interactions')
     elif btype == 'CatPi':
         ax.set_title('Pi-Cation Interactions')
+    elif btype == 'HPho':
+        ax.set_title('Hydrophobic Interactions')
     ax.plot(times, allbonds)
     ax.set_xlabel('time (ns)')
     ax.set_ylabel('# bonds')
@@ -138,8 +142,10 @@ def write_summary(fh, em, keys, btype, args):
         string = "Salt Bridges"
     elif btype == 'PiPi':
         string = 'Pi-Pi interactions'
-    else:  # CatPi
+    elif btype == 'CatPi':  # CatPi
         string = 'Pi-Cation interactions'
+    elif btype == 'HPho':
+        string = 'Hydrophobic'
     fh.write(f'{args.out} {string} summary.\n')
     fh.write(table)
     fh.write('\n\n')
@@ -168,7 +174,7 @@ def main():
         e.g.: -rkey 0,3 -rkey 0,0 (0 means all)", action="append")
     parser.add_argument('-r', help="Filter results at residue level (alias for '-rkey 0,3[,0,3])", action="store_true")
     parser.add_argument("-b", help="comma-separated list of interaction types to compute:\
-            default is hb,sb,pipi,catpi", default='hb,sb,pipi,catpi')
+            default is hb,sb,pipi,catpi [optional: hpho]", default='hb,sb,pipi,catpi')
     parser.add_argument("-th", help="only report the existence of bonds with an existence % above N", metavar='N', type=float)
     # parser.add_argument("-em", help="output indexed existence map", action="store_true")
     parser.add_argument('-s', help='slice trajectory', metavar='START:END:STEP', default='::')
@@ -205,6 +211,9 @@ def main():
         elif a == 'catpi':
             analyzers.append(analysis.CatPiFinder(msys, cms, aids1=aids1, aids2=aids2))
             btype.append('CatPi')
+        elif a == 'hpho':
+            analyzers.append(analysis.HydrophobicInter(msys, cms, prot_asl=asl1, lig_asl=asl2))
+            btype.append('HPho')
 
     out = analysis.analyze(trj, *analyzers)
 
