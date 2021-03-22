@@ -167,7 +167,7 @@ def plot(outname, result, trajectory):
     ax1.scatter(xx, yy, alpha=0.2, color='red')
     if xx:
         labels = ['None']
-        labels2 = len(xx)
+        labels2 = [str(len(xx))]
     else:
         labels = ['']
         labels2 = ['']
