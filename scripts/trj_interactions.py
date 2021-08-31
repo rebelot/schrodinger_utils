@@ -189,7 +189,7 @@ def main():
 
     slicer = slice(*[int(v) if v else None for v in args.s.split(':')])
     trj = trj[slicer]
-    times = np.array(list(int(round(fr.time/1000.0)) for fr in trj))
+    times = np.array(list(fr.time / 1000.0 for fr in trj))
 
     asl1 = args.g1
     asl2 = args.g2 or asl1
