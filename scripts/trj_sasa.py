@@ -19,8 +19,8 @@ def main():
             output: 
             sasa.dat: tot, hfo, hfi
             sasa_byres.dat: matrix of shape (times, residues)
-            '''
-            )
+            ''')
+
     parser.add_argument("cms", help="input cms file")
     parser.add_argument("asl", help="ASL specifying atoms for SASA calculations")
     parser.add_argument("-t", help="trajectory")
@@ -28,13 +28,13 @@ def main():
     parser.add_argument('-s', help='slice trj START:END:STEP (e.g.: "::10" will pick every 10th frame)')
     args = parser.parse_args()
 
-    if args.t:
+    if not args.t:
         msys, cms, trj = traj_util.read_cms_and_traj(args.cms)
     else:
         msys, cms = topo.read_cms(args.cms)
         trj = traj.read_traj(args.t)
 
-    slicer = slice([int(x) if x else None for x in args.s.split(':')])
+    slicer = slice([int(x) if x else None for x in args.s.split(':')]) if args.s else slice(None)
 
     sel_asl = cms.select_atom(args.asl)
     sel_st = cms.extract(sel_asl)
