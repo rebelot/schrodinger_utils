@@ -64,7 +64,7 @@ def main():
 
     with open(args.o + '.dat', 'w') as fh:
         fh.write('# tot hydrophobic hydrophilic\n')
-        for tot, hfo, hfi in zip(tot_sasa, hydrophilic_sasa, hydrophilic_sasa):
+        for tot, hfo, hfi in zip(tot_sasa, hydrophobic_sasa, hydrophilic_sasa):
             fh.write(f'{tot} {hfo} {hfi}\n')
 
     byres_sasa.tofile(args.o + '_byres.dat', sep=' ')
