@@ -54,7 +54,7 @@ def main():
     hydrophilic_sasa = []
     byres_sasa = []
     for i, fr in enumerate(tqdm(trj[slicer])): # type: ignore 
-        cms.setXYZ(fr.pos())
+        cms.setXYZ(fr.pos(cms.allaid_gids))
         sasa = analyze.calculate_sasa_by_residue(cms, atoms=sel_asl, exclude_water=True)
         byres_sasa.append(sasa)
         sasa = np.asarray(sasa)
