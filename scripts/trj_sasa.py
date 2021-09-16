@@ -40,14 +40,12 @@ def main():
     sel_st = cms.extract(sel_asl)
     sel_res = structure.get_residues_by_connectivity(sel_st) # maybe an overkill... st.residue should do the same?
 
-    HYDROPHILIC = ["ARG ", "ASP ", "GLU ", "HIS ", "ASN ", "GLN ", "LYS ", "SER ", "THR "]
-    HYDROPHOBIC = ["PHE ", "LEU ", "ILE ", "TYR ", "TRP ", "VAL ", "MET ", "PRO ", "CYS ", "ALA "]
+    HYDROPHILIC = ['ASN ', 'CYS ', 'GLN ', 'SER ', 'THR ', 'ASP ', 'GLU ', 'ARG ', 'HIS ', 'LYS ']
+    HYDROPHOBIC = ["ALA ", 'ILE ', 'LEU ', "MET",  'VAL ', 'PHE ', 'TRP ', 'GLY ', 'PRO ', 'TYR ']
 
     hydrophobic_idx = [i for i, res in enumerate(sel_res) if res.pdbres in HYDROPHOBIC]
     hydrophilic_idx = [i for i, res in enumerate(sel_res) if res.pdbres in HYDROPHILIC]
 
-    if len(hydrophilic_idx) + len(hydrophilic_idx) != len(sel_res):
-        print("Warning: There may be weird aminoacid names! Hfo/Hfi sasa may be incorrect")
 
     tot_sasa = []
     hydrophobic_sasa = []
