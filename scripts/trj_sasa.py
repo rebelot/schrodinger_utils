@@ -1,24 +1,31 @@
 import argparse
+import os
+os.environ["SCHRODINGER_ALLOW_UNSAFE_MULTIPROCESSING=1"] #FUCK OFF
 
 import matplotlib.pyplot as plt
 import numpy as np
 from schrodinger.application.desmond.packages import topo, traj, traj_util
+from schrodinger.application.desmond.packages import analysis
 from schrodinger.structutils import analyze
 from tqdm import tqdm
 
-#TODO: refactor using analyzers!
+# TODO: refactor using analyzers!
+
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("cms", help="input cms file")
-    parser.add_argument("-t", help="trajectory", required=True)
-    parser.add_argument("atoms", help="ASL specifying atoms for SASA calculations")
+    parser.add_argument("asl", help="ASL specifying atoms for SASA calculations")
+    parser.add_argument("-t", help="trajectory")
     parser.add_argument("-o", help="output filename. extensions are added automatically")
     parser.add_argument('-s', help='slice trj START:END:STEP (e.g.: "::10" will pick every 10th frame)')
     args = parser.parse_args()
 
-    msys, cms = topo.read_cms(args.cms)
-    trj = traj.read_traj(args.t)
+    if args.t:
+        msys, cms, trj = traj_util.read_cms_and_traj(args.cms)
+    else:
+        msys, cms = topo.read_cms(args.cms)
+        trj = traj.read_traj(args.t)
 
     start, end, step = args.s.split(':')
     start = int(start) if start else None
@@ -26,7 +33,7 @@ def main():
     step = int(step) if step else None
     slicer = slice(start, end, step)
 
-    subsys = cms.select_atom(args.atoms)
+    subsys = cms.select_atom(args.asl)
     subst = cms.extract(subsys)
     subres = list(subst.residue)
 
