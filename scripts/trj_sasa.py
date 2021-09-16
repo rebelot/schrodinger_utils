@@ -46,18 +46,17 @@ def main():
     hydrophobic_idx = [i for i, res in enumerate(sel_res) if res.pdbres in HYDROPHOBIC]
     hydrophilic_idx = [i for i, res in enumerate(sel_res) if res.pdbres in HYDROPHILIC]
 
-
     tot_sasa = []
     hydrophobic_sasa = []
     hydrophilic_sasa = []
     byres_sasa = []
-    for i, fr in enumerate(tqdm(trj[slicer])): # type: ignore 
+    for i, fr in enumerate(tqdm(trj[slicer])): # type: ignore
         cms.setXYZ(fr.pos(cms.allaid_gids))
         sasa = analyze.calculate_sasa_by_residue(cms, atoms=sel_asl, exclude_water=True)
         byres_sasa.append(sasa)
         sasa = np.asarray(sasa)
-        hydrophilic_sasa.append(np.sum(sasa[hydrophilic_idx])) # type: ignore 
-        hydrophobic_sasa.append(np.sum(sasa[hydrophobic_idx])) # type: ignore 
+        hydrophilic_sasa.append(np.sum(sasa[hydrophilic_idx])) # type: ignore
+        hydrophobic_sasa.append(np.sum(sasa[hydrophobic_idx])) # type: ignore
         tot_sasa.append(np.sum(sasa))
 
     byres_sasa = np.array(byres_sasa)
