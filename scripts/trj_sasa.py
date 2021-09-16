@@ -1,6 +1,6 @@
 import argparse
 import os
-os.environ["SCHRODINGER_ALLOW_UNSAFE_MULTIPROCESSING=1"] #FUCK OFF
+os.environ["SCHRODINGER_ALLOW_UNSAFE_MULTIPROCESSING"] = '1' #FUCK OFF
 
 import matplotlib.pyplot as plt
 import numpy as np
