@@ -25,7 +25,7 @@ def main():
                       action='store_true')
     args = parser.parse_args()
 
-    slicer = slice([int(x) if x else None for x in args.s.split(':')])
+    slicer = slice(*[int(x) if x else None for x in args.s.split(':')])
 
     if args.t:
         msys, cms = topo.read_cms(args.cms)
