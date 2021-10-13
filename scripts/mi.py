@@ -1,6 +1,9 @@
+#!/usr/bin/env python
+
 import argparse
 import multiprocessing as mp
 import time
+from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -24,7 +27,7 @@ def get_MI(x, njobs, dump=False, out="corr"):
     start_time = time.time()
     with mp.Pool(processes=njobs) as pool:
         res = pool.imap(worker, (x[:, : i + 1] for i in range(na * d)))
-        for i, r in enumerate(res):
+        for i, r in tqdm(enumerate(res), total=na * d):
             MI[i, : i + 1] = r
             MI[: i + 1, i] = r
     print(
@@ -39,7 +42,7 @@ def get_MI(x, njobs, dump=False, out="corr"):
 
     # postprocess
     # (ai, xi, aj, xj)
-    MI = MI.reshape(na, d, na, d).max(axis=(1, 3))
+    MI = MI.reshape(na, d, na, d).mean(axis=(1, 3))
     MI = np.sqrt(1 - np.exp(-2 * MI))  # eq. 9 from https://www.mpibpc.mpg.de/276284/paper_generalized_corr_lange.pdf
     return MI
 
@@ -79,7 +82,7 @@ def preproc_schrodinger(args):
         msys, cms, trj = traj_util.read_cms_and_traj(args.cms)
 
     slicer = (
-        [int(i) if i else None for i in args.s.split(":")]
+        slice(*[int(i) if i else None for i in args.s.split(":")])
         if args.s
         else slice(None, None)
     )
@@ -109,7 +112,7 @@ def preproc_mda(args):
         args.t if isinstance(args.t, list) else [args.t]
     )  # better way to handle this using argparse action='append'
     slicer = (
-        [int(i) if i else None for i in args.s.split(":")]
+        slice(*[int(i) if i else None for i in args.s.split(":")])
         if args.s
         else slice(None, None)
     )
@@ -182,7 +185,9 @@ def main():
     x = preproc(args)
     nt, na, d = x.shape
 
+    print('Calculating Generalized Correlations ...')
     MI = get_MI(x, args.j, dump=args.pickle, out=args.out)
+    print("Done.")
 
     with open(args.out + "_MI.dat", "w") as f:
         f.write(f"# MI matrix, {na} x {na}\n")
@@ -198,7 +203,9 @@ def main():
     plt.savefig(args.out + "_MI.png")
 
     if args.corr:
+        print("Calculating Pearson Correlation Coefficients Matrix")
         C = get_cormat(x.reshape(nt, na, d))
+        print("Done.")
         with open(args.out + "_Cor.dat", "w") as f:
             f.write(f"# Correlation matrix, {na} x {na}\n")
             for row in C:
@@ -218,6 +225,21 @@ def main():
         fig.tight_layout()
         plt.savefig(args.out + "_MICor.png")
 
-
+    print("All done.")
+    print(r"""
+            ____
+            /____ `\
+           ||_  _`\ \
+     .-.   `|O, O  ||
+     | |    (/    -)\
+     | |    |`-'` |\`
+  __/  |    | _/  |
+ (___) \.  _.\__. `\___
+ (___)  )\/  \    _/  ~\.
+ (___) . \   `--  _   `\
+  (__)-    ,/        (   |
+       `--~|         |   |
+           |         |   | ")
+    """)
 if __name__ == "__main__":
     main()
