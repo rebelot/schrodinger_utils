@@ -39,9 +39,8 @@ def get_MI(x, njobs, dump=False, out="corr"):
 
     # postprocess
     # (ai, xi, aj, xj)
-    MI = MI.reshape(na, d, na, d).mean(axis=(1, 3))
-    MI = np.sqrt(1 - np.exp(-MI))
-    MI /= MI.max()
+    MI = MI.reshape(na, d, na, d).max(axis=(1, 3))
+    MI = np.sqrt(1 - np.exp(-2 * MI))  # eq. 9 from https://www.mpibpc.mpg.de/276284/paper_generalized_corr_lange.pdf
     return MI
 
 
@@ -193,7 +192,7 @@ def main():
 
     fig = plt.figure(figsize=(15, 15))
     fig.suptitle("Mutual Information")
-    plt.imshow(MI, origin="lower")
+    plt.imshow(MI, origin="lower", cmap='inferno')
     plt.colorbar()
     fig.tight_layout()
     plt.savefig(args.out + "_MI.png")
@@ -207,10 +206,17 @@ def main():
                 f.write("\n")
         fig = plt.figure(figsize=(15, 15))
         fig.suptitle("Correlation Matrix")
-        plt.imshow(C, origin="lower")
+        plt.imshow(C, origin="lower", cmap='inferno')
         plt.colorbar()
         fig.tight_layout()
         plt.savefig(args.out + "_Cor.png")
+
+        fig = plt.figure(figsize=(15, 15))
+        fig.suptitle("MI/Cor Matrix")
+        plt.imshow(np.tril(MI) + np.triu(C, k=1), origin="lower", cmap='inferno')
+        plt.colorbar()
+        fig.tight_layout()
+        plt.savefig(args.out + "_MICor.png")
 
 
 if __name__ == "__main__":
