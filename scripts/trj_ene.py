@@ -6,10 +6,12 @@ import numpy as np
 from schrodinger.application.desmond.packages import analysis, topo, traj, traj_util
 from schrodinger.application.desmond.packages.energygroup import (
     EnergyGroupBase,
+    # EnergyFacade,
+    # SliceParams
     analyze,
 )
-from schrodinger.job import launchapi
-from schrodinger.utils import cmdline
+# from schrodinger.job import launchapi
+# from schrodinger.utils import cmdline
 
 
 def parse_args():
@@ -98,7 +100,6 @@ class GroupEnergy(EnergyGroupBase):
         """
         return [[getattr(c[self._idx], attr) for attr in self._attr] for c in result]
 
-
 def main():
     args = parse_args()
 
@@ -123,7 +124,7 @@ def main():
         analyzers.append(GroupEnergy(cms, asl1, types, group2=asl2 or None))
         names.append(name)
 
-    results = analyze(trj, *analyzers, sim_cfg=args.cfg)
+    results = analyze(trj, cms, *analyzers, sim_cfg=args.cfg)
 
     # results dims = (n_ana, n_times , n_types)
     for name, ana, res in zip(names, analyzers, results):
