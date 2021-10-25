@@ -12,7 +12,7 @@ from schrodinger.job import launchapi
 from schrodinger.utils import cmdline
 
 
-def parse_args(argv):
+def parse_args():
     parser = argparse.ArgumentParser(
         description="""Calculate energy properties from MD simulation, example:
             trj_ene.py md-out.cms md-out.cfg enegrp -e 'interprot:c.n A:c.n B:Coulomb,vdW' -e solv:solvent::Total -e solvprot:solvent:protein:Coulomb,vdW -e prot:protein::Total"""
@@ -32,7 +32,7 @@ def parse_args(argv):
             Avaialble energy types are: Coulomb, vdW, Bond, Angle, Torsion, Total.
             TYPE energies are reported within ASL1 or between ASL1 and ASL2 if the latter is specified.""",
     )
-    return parser.parse_args(argv)
+    return parser.parse_args()
 
 
 # def get_job_spec_from_args(argv):
@@ -99,8 +99,8 @@ class GroupEnergy(EnergyGroupBase):
         return [[getattr(c[self._idx], attr) for attr in self._attr] for c in result]
 
 
-def main(*argv):
-    args = parse_args(argv)
+def main():
+    args = parse_args()
 
     if not args.t:
         _, cms, trj = traj_util.read_cms_and_traj(args.cms)
@@ -141,4 +141,4 @@ def main(*argv):
 
 if __name__ == "__main__":
     # cmdline.main_wrapper(main, *sys.argv[1:])
-    main(sys.argv[1:])
+    main()
