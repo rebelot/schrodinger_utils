@@ -35,20 +35,20 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def get_job_spec_from_args(argv):
-    # first argument is this script
-    args = parse_args(argv[1:])
-    job_builder = launchapi.JobSpecificationArgsBuilder(argv, use_jobname_log=True)
-    job_builder.setInputDirectory(args.t)
-    job_builder.setInputFile(args.cms)
-    job_builder.setInputFile(args.cfg)
-    job_builder.setOutputFile(args.out + ".png")
-    for expr in args.e:
-        name = expr.split(":")[0]
-        job_builder.setOutputFile(args.out + f"_{name}.dat")
-    job_builder.setJobname("enecalc")
-    job_builder.setInputDirectory
-    return job_builder.getJobSpec()
+# def get_job_spec_from_args(argv):
+#     # first argument is this script
+#     args = parse_args(argv[1:])
+#     job_builder = launchapi.JobSpecificationArgsBuilder(argv, use_jobname_log=True)
+#     job_builder.setInputDirectory(args.t)
+#     job_builder.setInputFile(args.cms)
+#     job_builder.setInputFile(args.cfg)
+#     job_builder.setOutputFile(args.out + ".png")
+#     for expr in args.e:
+#         name = expr.split(":")[0]
+#         job_builder.setOutputFile(args.out + f"_{name}.dat")
+#     job_builder.setJobname("enecalc")
+#     job_builder.setInputDirectory
+#     return job_builder.getJobSpec()
 
 
 class GroupEnergy(EnergyGroupBase):
@@ -140,5 +140,5 @@ def main(*argv):
 
 
 if __name__ == "__main__":
-    cmdline.main_wrapper(main, *sys.argv[1:])
-    # main()
+    # cmdline.main_wrapper(main, *sys.argv[1:])
+    main()
