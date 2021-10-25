@@ -125,7 +125,7 @@ def main():
         names.append(name)
 
     results = analyze(trj, cms, *analyzers, sim_cfg=args.cfg)
-    results = [results]  # energygroup.py:1122 yeah... why?!
+    results = [results] if len(analyzers) == 1 else results  # energygroup.py:1122 yeah... why?!
 
     # results dims = (n_ana, n_times , n_types)
     for name, ana, res in zip(names, analyzers, results):
