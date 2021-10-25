@@ -125,11 +125,12 @@ def main():
         names.append(name)
 
     results = analyze(trj, cms, *analyzers, sim_cfg=args.cfg)
+    results = [results]  # energygroup.py:1122 yeah... why?!
 
     # results dims = (n_ana, n_times , n_types)
     for name, ana, res in zip(names, analyzers, results):
         res = np.array(res)  # (n_times, n_types)
-        with open(args.o + f"_{name}.dat", "w") as fh:
+        with open(args.out + f"_{name}.dat", "w") as fh:
             fh.write("# " + " ".join(ana._attr) + "\n")
             fh.write("\n".join(" ".join(str(v) for v in r) for r in res))
 
@@ -137,7 +138,7 @@ def main():
         plt.xlabel("time (ns)")
         plt.ylabel(r"Energy ($kcal\ mol^\{{-1}}$")
     plt.legend(names)
-    plt.savefig(args.o + ".png")
+    plt.savefig(args.out + ".png")
 
 
 if __name__ == "__main__":
