@@ -141,4 +141,4 @@ def main(*argv):
 
 if __name__ == "__main__":
     # cmdline.main_wrapper(main, *sys.argv[1:])
-    main()
+    main(sys.argv[1:])
