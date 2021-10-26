@@ -33,6 +33,8 @@ def parse_args():
             - ASL1 and (optional) ASL2 represent the selections used to calculate energies;
             - TYPE(s) may be a single or comma-separated list of keys representing the energy types to report;
             Avaialble energy types are: Coulomb, vdW, Bond, Angle, Torsion, Total.
+            When referring to the Desmond User Manual (2.6.4): Coulomb = pair_elec + nonbonded_elec + far_exclusion, vdW = pair_vdw + nonbonded_vdw;
+            although not directly inspectable, improper dihedral energy contribution is summed in the Total energy.
             TYPE energies are reported within ASL1 or between ASL1 and ASL2 if the latter is specified.""",
     )
     return parser.parse_args()
@@ -79,6 +81,9 @@ class GroupEnergy(EnergyGroupBase):
         :type            type2: `List[int] or None`
         """
         # DUCK: this is used to cache the results, since all energy types are actually calculated
+        # it could be improved, since also Self energies are calculate and could be retrieved
+        # i.e. [GroupEnergy(cms, 'protein', 'Total', 'water'), GroupEnergy(cms, 'protein', 'Total')]
+        # will have different keys but data could be retrived from 0 with key = frozenset({0})
         self.key = (group1, group2)
         aids1 = set(cms_model.select_atom(group1))
         aids2 = set(cms_model.select_atom(group2)) if group2 else None
@@ -88,21 +93,21 @@ class GroupEnergy(EnergyGroupBase):
             "options": self.DEFAULT_OPTIONS,
             "groups": groups,
         }
-        # dict key: (g1, g2) where gn is the nth group index:
+        # dict key: frozenset({g1, g2}) where gn is the nth group index:
         # results[time][_idx] -> EnergyComponent storing energies between indexed groups
-        self._idx = frozenset([0, 1]) if group2 else frozenset([0])
+        # when i == j the key is {i}
+        self._idx = frozenset([0, group2 and 1 or 0])
         # energy types
         self._attr = [self.TYPE_MAP[t] for t in type]
 
     def getResult(self, result):
         """
-        :type result: tuple[dict[str|tuple, EnergyComponent]
+        :type result: tuple[dict[Union(str,frozenset), EnergyComponent]]
         :return: frame-by-frame result of the `type(s)` energies (see TYPE_MAP)
                  of the atom group1 or between group1 and 2
-        :rtype: `List[List(float)]`
+        :rtype: `list[list[float]]`
         """
-        # return [[getattr(c[self._idx], etype) for etype in self._attr] for c in result]
-        return (self._idx, self._attr, result)
+        return [[getattr(c[self._idx], etype) for etype in self._attr] for c in result]
 
 def main():
     args = parse_args()
@@ -129,10 +134,7 @@ def main():
         names.append(name)
 
     results = analyze(trj, cms, *analyzers, sim_cfg=args.cfg)
-    results = [results] if len(analyzers) == 1 else results  # energygroup.py:1122 yeah... why?!
-
-    with open('test.pickle', 'wb') as p:
-        pickle.dump(results, p)
+    results = [results] if len(analyzers) == 1 else results  # energygroup.py:1122
 
     # results dims = (n_ana, n_times, n_types(ana))
     for name, ana, res in zip(names, analyzers, results):
@@ -157,7 +159,7 @@ if __name__ == "__main__":
 #   Dispersion_Correction           (0.000000)      -2.11576729e+03
 #   Self_Energy_Correction          (0.000000)      -9.17891509e+05
 #   Net_Charge_Correction           (0.000000)      -5.15641662e-12
-#   Global_Force_Sum                (0.000000)      0.00000000e+00                                  k = (0,0)           (0,1)           (1,1)      "all" or "time"
+#   Global_Force_Sum                (0.000000)      0.00000000e+00                                  k = {0,0}           {0,1}           {1,1}       "all"
 #    (group)                        (0.000000)            0               1               2         total
 #   Kinetic                         (0.000000)      0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00
 #    (pair)                         (0.000000)         ( 0, 0)         ( 0, 1)         ( 0, 2)         ( 1, 1)         ( 1, 2)         ( 2, 2)      total
@@ -171,7 +173,7 @@ if __name__ == "__main__":
 # N nonbonded_elec      '+ *  :     (0.000000)      -1.91022043e+05 2.34648035e+01  -1.85332078e+02 3.65781606e+01  9.06274987e+01  1.60126598e+01  -1.91040692e+05
 # N nonbonded_vdw          * +'     (0.000000)      1.71651583e+04  -1.03316076e+03 -1.35890014e+02 -2.70047220e+01 -3.26228006e+01 -1.60229740e+00 1.59348777e+04
 # N far_terms              *        (0.000000)      1.96384690e+04  -2.68010199e+04 -1.13082227e+04 9.65330892e+03  8.11512720e+03  1.71623000e+03  1.01389245e+03
-# U Total                  *        (0.000000)      7.51524092e+05  -2.24394096e+04 -1.07669379e+04 9.36038911e+03  7.92628867e+03  1.73064036e+03  7.37335063e+05
+#   Total                  *        (0.000000)      7.51524092e+05  -2.24394096e+04 -1.07669379e+04 9.36038911e+03  7.92628867e+03  1.73064036e+03  7.37335063e+05
 #   Virial                          (0.000000)    -14055    -1899.2     1726.5    -753.19     -12985      -1200     178.48    -279.21     -13059
 #   K.E.tensor                      (0.000000)         0          0          0          0          0          0          0          0          0
 #   Pressure_Tensor                 (0.000000)   -1373.4    -185.59     168.71    -73.601    -1268.9    -117.26     17.441    -27.284    -1276.1
