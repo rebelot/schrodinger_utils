@@ -1,5 +1,6 @@
 import argparse
 import sys
+import pickle
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -90,15 +91,18 @@ class GroupEnergy(EnergyGroupBase):
         # dict key: (g1, g2) where gn is the nth group index:
         # results[time][_idx] -> EnergyComponent storing energies between indexed groups
         self._idx = frozenset([0, 1]) if group2 else frozenset([0])
+        # energy types
         self._attr = [self.TYPE_MAP[t] for t in type]
 
     def getResult(self, result):
         """
+        :type result: tuple[dict[str|tuple, EnergyComponent]
         :return: frame-by-frame result of the `type(s)` energies (see TYPE_MAP)
                  of the atom group1 or between group1 and 2
         :rtype: `List[List(float)]`
         """
-        return [[getattr(c[self._idx], attr) for attr in self._attr] for c in result]
+        # return [[getattr(c[self._idx], etype) for etype in self._attr] for c in result]
+        return (self._idx, self._attr, result)
 
 def main():
     args = parse_args()
@@ -121,13 +125,16 @@ def main():
     for expr in args.e:
         name, asl1, asl2, types = expr.split(":")
         types = types.replace(" ", "").split(",")
-        analyzers.append(GroupEnergy(cms, asl1, types, group2=asl2 or None))
+        analyzers.append(GroupEnergy(cms, asl1, types, group2=asl2))
         names.append(name)
 
     results = analyze(trj, cms, *analyzers, sim_cfg=args.cfg)
     results = [results] if len(analyzers) == 1 else results  # energygroup.py:1122 yeah... why?!
 
-    # results dims = (n_ana, n_times , n_types)
+    with open('test.pickle', 'wb') as p:
+        pickle.dump(results, p)
+
+    # results dims = (n_ana, n_times, n_types(ana))
     for name, ana, res in zip(names, analyzers, results):
         res = np.array(res)  # (n_times, n_types)
         with open(args.out + f"_{name}.dat", "w") as fh:
@@ -144,3 +151,27 @@ def main():
 if __name__ == "__main__":
     # cmdline.main_wrapper(main, *sys.argv[1:])
     main()
+
+#   energy_term = r"(angle|dihedral|far_exclusion|far_terms|nonbonded_elec|nonbonded_vdw|pair_elec|pair_vdw|stretch|Total)"
+#   time=0.000000 en=7.37335063e+05 E_p=-1.82672213e+05 E_k=0.00000000e+00 E_x=1.03413102e+01 P=-1.30614149e+03 V=7.10988372e+05
+#   Dispersion_Correction           (0.000000)      -2.11576729e+03
+#   Self_Energy_Correction          (0.000000)      -9.17891509e+05
+#   Net_Charge_Correction           (0.000000)      -5.15641662e-12
+#   Global_Force_Sum                (0.000000)      0.00000000e+00                                  k = (0,0)           (0,1)           (1,1)      "all" or "time"
+#    (group)                        (0.000000)            0               1               2         total
+#   Kinetic                         (0.000000)      0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00
+#    (pair)                         (0.000000)         ( 0, 0)         ( 0, 1)         ( 0, 2)         ( 1, 1)         ( 1, 2)         ( 2, 2)      total
+# B angle                  *        (0.000000)      9.90058603e+03  1.27680700e+03  1.56821997e+02  0.00000000e+00  1.56821997e+02  0.00000000e+00  1.14910370e+04
+# B dihedral               *        (0.000000)      8.16555462e+03  6.89871612e+02  1.65259951e+01  1.44852127e+01  8.26299754e+00  0.00000000e+00  8.89470043e+03
+# B improper                        (0.000000)      7.98710917e+01  0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00  7.98710917e+01
+# N pair_elec  14       ,+ *        (0.000000)      -7.77588351e+02 -7.00995515e+02 -3.91073926e+02 3.99505213e+02  0.00000000e+00  0.00000000e+00  -1.47015258e+03
+# N pair_vdw   14  elec :  * +,     (0.000000)      3.22434844e+03  3.86199112e+02  3.23889788e+02  -1.77210960e+01 0.00000000e+00  0.00000000e+00  3.91671625e+03
+# B stretch             :  *  :     (0.000000)      5.52426398e+03  6.74776070e+02  0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00  6.19904005e+03
+# N far_exclusion       :+ *  : vdw (0.000000)      8.79625472e+05  3.04464804e+03  7.56343060e+02  -6.98762576e+02 -4.11928217e+02 0.00000000e+00  8.82315772e+05
+# N nonbonded_elec      '+ *  :     (0.000000)      -1.91022043e+05 2.34648035e+01  -1.85332078e+02 3.65781606e+01  9.06274987e+01  1.60126598e+01  -1.91040692e+05
+# N nonbonded_vdw          * +'     (0.000000)      1.71651583e+04  -1.03316076e+03 -1.35890014e+02 -2.70047220e+01 -3.26228006e+01 -1.60229740e+00 1.59348777e+04
+# N far_terms              *        (0.000000)      1.96384690e+04  -2.68010199e+04 -1.13082227e+04 9.65330892e+03  8.11512720e+03  1.71623000e+03  1.01389245e+03
+# U Total                  *        (0.000000)      7.51524092e+05  -2.24394096e+04 -1.07669379e+04 9.36038911e+03  7.92628867e+03  1.73064036e+03  7.37335063e+05
+#   Virial                          (0.000000)    -14055    -1899.2     1726.5    -753.19     -12985      -1200     178.48    -279.21     -13059
+#   K.E.tensor                      (0.000000)         0          0          0          0          0          0          0          0          0
+#   Pressure_Tensor                 (0.000000)   -1373.4    -185.59     168.71    -73.601    -1268.9    -117.26     17.441    -27.284    -1276.1
