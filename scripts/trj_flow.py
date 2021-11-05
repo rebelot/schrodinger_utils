@@ -9,11 +9,9 @@ Date: 2021-11-01
 
 import argparse
 import multiprocessing as mp
-from dataclasses import dataclass
 from typing import List
 
 import numpy as np
-import plotly.graph_objects as go
 from matplotlib.colors import to_rgb
 from schrodinger.application.desmond.packages import topo, traj, traj_util
 from schrodinger.structutils import analyze
@@ -21,74 +19,57 @@ from scipy.spatial import ConvexHull, Delaunay
 from tqdm import tqdm
 
 # https://stackoverflow.com/questions/16750618/whats-an-efficient-way-to-find-if-a-point-lies-in-the-convex-hull-of-a-point-cl
+# TODO:
+# - [] maybe add support for variable n_atom_per_mol (multiple obj types)
+# - [] multiprocessing
+# - [] mdanalysis 
+# - [] clustering
+# - [] draw volumes
 
+class Cgo:
+    COLOR     = 6.0
+    BEGIN     = 2.0
+    END       = 3.0
+    LINE_LOOP = 2.0
+    SPHERE    = 7.0
+    VERTEX    = 4.0
+    LINEWIDTH = 10.0
 
-# def runner(fr, obj_gids, hull, hull_asl=None, cms=None, hull_gids=None):
-#     p_obj = fr.pos(obj_gids) # (na_obj, 3)
-#
-#     # dynamic asl
-#     if hull_asl:
-#         cms.setXYZ(fr.pos(cms.allaid_gids))
-#         hull_gids = topo.asl2gids(cms, hull_asl) # variable (na_stite!,)
-#
-#     points = fr.pos(hull_gids) # ndarray(na_site!, 3)
-#     hull.add_points(points)
-#
-#     # find which object atoms are found within site hull
-#     return Delaunay(points).find_simplex(p_obj) >= 0 # bool ndarray(na_obj,)
+    def __init__(self):
+        self.obj = []
 
+    def scatter(self,
+        points,
+        linecolor=[1.0, 1.0, 1.0],
+        line=True,
+        marker=False,
+        radius=0.1,
+        markercolor=False,
+        linewidth=1.0,
+    ):
+        obj = []
+        if line:
+            obj.extend([
+                    self.BEGIN, self.LINE_LOOP,
+                    self.COLOR, *linecolor,
+                    self.LINEWIDTH, linewidth,
+                ])
+            for xyz in points:
+                obj.extend([self.VERTEX, *xyz])
+            obj.extend([self.END])
 
-def getposfunc(size: int):
-    """
-    :return: center of mass of each object molecule, array (n_obj_molecules, 3)
-    """
+        if marker:
+            obj.extend([self.COLOR, *(markercolor or linecolor)])
+            for xyz in points:
+                obj.extend([self.SPHERE, *xyz, radius])
 
-    def gidgroups2coms(fr: traj.Frame, groups):
-        return np.array([fr.pos(group).mean(axis=0) for group in groups])
+        self.obj.extend([float(i) for i in obj])
 
-    def gidgroups2pos(fr: traj.Frame, groups):
-        return fr.pos(groups.flatten())
-
-    if size > 1:
-        return gidgroups2coms
-    else:
-        return gidgroups2pos
-
-
-def find_objects_in_hull(
-    cms: topo.cms.Cms, trj: List[traj.Frame], obj_gids_bymol, hull_asl: str
-):
-    """
-    Compute, for each frame, wether center of mass of `object` is within the
-    convex hull of an atom `selection`.
-
-    :ojb_gids_bymol: obj gids grouped by molecule, array (n_mol, n_atoms_per_molecule) of int
-    :return: array (n_times, n_obj) of bool: M[i,j] = True if center of mass of
-    obj `j` is within hull at time `i`.
-    """
-
-    getpos = getposfunc(obj_gids_bymol.shape[-1])
-
-    # initialize site hull
-    hull_gids = topo.asl2gids(cms, hull_asl)  # variable (na_stite!,)
-
-    is_in_hull_matrix = np.empty((len(trj), len(obj_gids_bymol)), dtype=bool)
-    for i, fr in enumerate(tqdm(trj)):
-        p_obj = getpos(fr, obj_gids_bymol)  # (na_obj, 3)
-
-        # dynamic asl
-        if topo.is_dynamic_asl(cms, hull_asl):
-            cms.setXYZ(fr.pos(cms.allaid_gids))
-            hull_gids = topo.asl2gids(cms, hull_asl)  # variable (na_stite!,)
-
-        points = fr.pos(hull_gids)  # ndarray(na_site!, 3)
-
-        # find which object atoms are found within site hull
-        is_in_hull_matrix[i] = (
-            Delaunay(points).find_simplex(p_obj) >= 0
-        )  # bool ndarray(na_obj,)
-
-    return is_in_hull_matrix
+    @classmethod
+    def Scatter(cls, *args, **kwargs):
+        cgo = Cgo()
+        cgo.scatter(*args, **kwargs)
+        return cgo
 
 
 class SubPath:
@@ -216,15 +197,72 @@ class Path:
         :obj_in_scope_matrix: bitmask, array (n_times, n_obj_groups) when each obj is in scope.
         :return: list of Path objects
         """
+        # mol_gids must be (1, n_atoms), but iterating on (n_obj, n_atoms) will yield (n_atoms,)
+        # adding one dimension will do the trick (or use list-indexing)
         getpos = getposfunc(obj_gids_bymol.shape[-1])
         paths = []
-        for mol_gids, in_site, in_scope in zip(
-            obj_gids_bymol, obj_in_site_matrix.T, obj_in_scope_matrix.T
-        ):
-            pos = np.array([getpos(fr, [ mol_gids ]).flatten() for fr in trj])
+        for mol_gids, in_site, in_scope in tqdm(zip( 
+            obj_gids_bymol[:, None],
+            obj_in_site_matrix.T,
+            obj_in_scope_matrix.T
+        ), total=len(obj_gids_bymol)):
+            pos = np.array([getpos(fr, mol_gids).flatten() for fr in trj], dtype=np.float32)
             path = Path(mol_gids, pos, in_site, in_scope)
             paths.append(path)
         return paths
+
+
+def getposfunc(size: int):
+    """
+    :return: center of mass of each object molecule, array (n_obj_molecules, 3)
+    """
+
+    def gidgroups2coms(fr: traj.Frame, groups):
+        return np.array([fr.pos(group).mean(axis=0) for group in groups])
+
+    def gidgroups2pos(fr: traj.Frame, groups):
+        return fr.pos(groups.flatten())
+
+    if size > 1:
+        return gidgroups2coms
+    else:
+        return gidgroups2pos
+
+
+def find_objects_in_hull(
+    cms: topo.cms.Cms, trj: List[traj.Frame], obj_gids_bymol, hull_asl: str
+):
+    """
+    Compute, for each frame, wether center of mass of `object` is within the
+    convex hull of an atom `selection`.
+
+    :ojb_gids_bymol: obj gids grouped by molecule, array (n_mol, n_atoms_per_molecule) of int
+    :return: array (n_times, n_obj) of bool: M[i,j] = True if center of mass of
+    obj `j` is within hull at time `i`.
+    """
+
+    getpos = getposfunc(obj_gids_bymol.shape[-1])
+
+    # initialize site hull
+    hull_gids = topo.asl2gids(cms, hull_asl)  # variable (na_stite!,)
+
+    is_in_hull_matrix = np.empty((len(trj), len(obj_gids_bymol)), dtype=bool)
+    for i, fr in enumerate(tqdm(trj)):
+        p_obj = getpos(fr, obj_gids_bymol)  # (na_obj, 3)
+
+        # dynamic asl
+        if topo.is_dynamic_asl(cms, hull_asl):
+            cms.setXYZ(fr.pos(cms.allaid_gids))
+            hull_gids = topo.asl2gids(cms, hull_asl)  # variable (na_stite!,)
+
+        points = fr.pos(hull_gids)  # ndarray(na_site!, 3)
+
+        # find which object atoms are found within site hull
+        is_in_hull_matrix[i] = (
+            Delaunay(points).find_simplex(p_obj) >= 0
+        )  # bool ndarray(na_obj,)
+
+    return is_in_hull_matrix
 
 
 def main():
@@ -278,7 +316,6 @@ def main():
 
     trj = trj[slicer]
 
-    # TODO: maybe add support for variable n_atom_per_mol (multiple obj types)
     obj_aids_bymol = analyze.group_by_connectivity(
         cms, cms.select_atom(obj_asl)
     )  # (n_mol, n_at_per_mol)
@@ -288,7 +325,6 @@ def main():
 
     print("Selecting objects to track...")
     obj_in_site_matrix = find_objects_in_hull(cms, trj, obj_gids_bymol, site_asl)
-    # obj_in_site_matrix = pickle.load(open('in_site_test', 'rb'))
 
     # find indices of the objects that enter site at least once
     obj_ok_i = np.nonzero(np.any(obj_in_site_matrix, axis=0))[0]
@@ -297,7 +333,6 @@ def main():
 
     print("Checking scope...")
     obj_in_scope_matrix = find_objects_in_hull(cms, trj, obj_gids_bymol_ok, scope_asl)
-    # obj_in_scope_matrix = pickle.load(open('in_scope_test', 'rb'))
     print("Done.")
 
     print("Building Paths...")
@@ -314,235 +349,65 @@ def main():
     scope_p = trj[0].pos(topo.asl2gids(cms, scope_asl))
 
     print("Rendering...")
-    # fig = plot(paths, scope_p, scope_hull, site_hull)
-    # fig.show()
 
     script = plotcgo(paths, site_hull, scope_hull)
     with open(args.out + "_pymol.py", "w") as f:
         f.write(script)
-
+    print("All done.\n\n")
+    print("""
+      .-``'.      S T A Y   W I T H    .'''-.
+    .`   .`~            T H E           ~`.   '.
+_.-'     '._         ~ F L O W ~        _.'     '-._
+  ,(   ,(   ,(   ,(   ,(   ,(   ,(   ,(   ,(   ,(   ,(
+`-'  `-'  `-'  `-'  `-'  `-'  `-'  `-'  `-'  `-'  `-' `
+""")
     return
 
 
 def plotcgo(paths, site_hull, scope_hull):
-    @dataclass
-    class Cgo:
-        BEGIN: float
-        END: float
-        LINE_LOOP: float
-        SPHERE: float
-        VERTEX: float
-        LINEWIDTH: float
-        COLOR: float
 
-    cgo = Cgo(
-        **{
-            "COLOR": 6.0,
-            "BEGIN": 2.0,
-            "END": 3.0,
-            "LINE_LOOP": 2.0,
-            "SPHERE": 7.0,
-            "VERTEX": 4.0,
-            "LINEWIDTH": 10.0,
-        }
-    )
+    def plot_hull(hull, *args, **kwargs):
+        hull_cgo = Cgo()
+        for simplex in hull.simplices:  # type: ignore
+            facet = np.hstack((simplex, simplex[0]))
+            hull_cgo.scatter(hull.points[facet], *args, **kwargs)
+        return hull_cgo
 
-    def scatter(
-        points,
-        linecolor=[1.0, 1.0, 1.0],
-        line=True,
-        marker=False,
-        radius=0.1,
-        markercolor=False,
-        linewidth=1.0,
-    ):
-        obj = []
-        if line:
-            obj.extend(
-                [
-                    cgo.BEGIN,
-                    cgo.LINE_LOOP,
-                    cgo.COLOR,
-                    *linecolor,
-                    cgo.LINEWIDTH,
-                    linewidth,
-                ]
-            )
-            for xyz in points:
-                obj.extend([cgo.VERTEX, *xyz])
-            obj.extend([cgo.END])
+    def plot_paths(paths, attr, *args, **kwargs):
+        path_cgo = Cgo()
+        for path in paths:
+            for p in getattr(path, attr):
+                if len(p):
+                    path_cgo.scatter(p, *args, **kwargs)
+        return path_cgo
 
-        if marker:
-            obj.extend([cgo.COLOR, *(markercolor or linecolor)])
-            for xyz in points:
-                obj.extend([cgo.SPHERE, *xyz, radius])
 
-        return [float(i) for i in obj]
-
-    site_hull_obj = []
-    for simplex in site_hull.simplices:  # type: ignore
-        facet = np.hstack((simplex, simplex[0]))
-        site_hull_obj += scatter(
-            site_hull.points[facet], linecolor=to_rgb("cyan"), marker=True, radius=0.05
-        )
-
-    scope_hull_obj = []
-    for simplex in scope_hull.simplices:  # type: ignore
-        facet = np.hstack((simplex, simplex[0]))
-        scope_hull_obj += scatter(
-            scope_hull.points[facet], linecolor=to_rgb("gray"), marker=True, radius=0.05
-        )
-
-    inlets_obj = scatter(
+    site_hull_cgo = plot_hull(site_hull, linecolor=to_rgb("cyan"), marker=True, radius=0.05)
+    scope_hull_cgo = plot_hull(scope_hull, linecolor=to_rgb("gray"), marker=True, radius=0.05)
+    inlets_cgo = Cgo.Scatter(
         np.vstack([p.inlets for p in paths if len(p.inlets)]),
-        linecolor=to_rgb("lightblue"),
-        line=False,
-        marker=True,
-        radius=1,
-    )
-    outlets_obj = scatter(
+        linecolor=to_rgb("lightblue"), line=False, marker=True, radius=.5,)
+    outlets_cgo = Cgo.Scatter(
         np.vstack([p.outlets for p in paths if len(p.outlets)]),
-        linecolor=to_rgb("purple"),
-        line=False,
-        marker=True,
-        radius=1,
-    )
-
-    incoming_obj, outgoing_obj = [], []
-    inside_obj, collat_obj = [], []
-    for path in paths:
-        for p in path.incoming:
-            if len(p):
-                incoming_obj += scatter(p, linecolor=to_rgb("lightblue"))
-        for p in path.outgoing:
-            if len(p):
-                outgoing_obj += scatter(p, linecolor=to_rgb("purple"))
-        for p in path.inside:
-            if len(p):
-                inside_obj += scatter(p, linecolor=to_rgb("green"))
-        for p in path.collat:
-            if len(p):
-                collat_obj += scatter(p, linecolor=to_rgb("orange"))
+        linecolor=to_rgb("purple"), line=False, marker=True, radius=.5,)
+    incoming_cgo = plot_paths(paths, 'incoming', linecolor=to_rgb("mediumslateblue"))
+    outgoing_cgo = plot_paths(paths, 'outgoing', linecolor=to_rgb("tomato"))
+    inside_cgo = plot_paths(paths, 'inside', linecolor=to_rgb("green"))
+    collat_cgo = plot_paths(paths, 'collat', linecolor=to_rgb("gold"))
 
     script = f"""
 from pymol import cmd
 
-cmd.load_cgo({site_hull_obj}, "site_hull", 1)
-cmd.load_cgo({scope_hull_obj}, "scope_hull", 1)
-cmd.load_cgo({incoming_obj}, "incoming", 1)
-cmd.load_cgo({outgoing_obj}, "outgoing", 1)
-cmd.load_cgo({inside_obj}, "inside", 1)
-cmd.load_cgo({collat_obj}, "collat", 1)
-cmd.load_cgo({inlets_obj}, "inlets", 1)
-cmd.load_cgo({outlets_obj}, "outlets", 1)
+cmd.load_cgo({site_hull_cgo.obj}, "site_hull", 1)
+cmd.load_cgo({scope_hull_cgo.obj}, "scope_hull", 1)
+cmd.load_cgo({incoming_cgo.obj}, "incoming", 1)
+cmd.load_cgo({outgoing_cgo.obj}, "outgoing", 1)
+cmd.load_cgo({inside_cgo.obj}, "inside", 1)
+cmd.load_cgo({collat_cgo.obj}, "collat", 1)
+cmd.load_cgo({inlets_cgo.obj}, "inlets", 1)
+cmd.load_cgo({outlets_cgo.obj}, "outlets", 1)
     """
     return script
-
-
-def plot(paths, p_protein, scope_hull, site_hull):
-    density, (x, y, z) = np.histogramdd(
-        np.vstack([chunk for path in paths for chunk in path.pos]), bins=105, density=1
-    )
-    X, Y, Z = np.meshgrid(x[1:], y[1:], z[1:])
-    vol = go.Volume(
-        x=X.flatten(),
-        y=Y.flatten(),
-        z=Z.flatten(),
-        value=density.flatten(),
-        isomin=0,
-        isomax=density.max(),
-        opacity=0.1,  # needs to be small to see through all surfaces
-        surface_count=17,  # needs to be a large number for good volume rendering
-    )
-
-    scope = go.Scatter3d(
-        **{k: v for (k, v) in zip("xyz", p_protein.T)},
-        line=dict(color="darkblue", width=5),
-        marker=dict(size=1),
-    )
-
-    scope_facets = []
-    for simplex in scope_hull.simplices:  # type: ignore
-        facet = np.hstack((simplex, simplex[0]))
-        scope_facets.append(
-            go.Scatter3d(
-                **{k: v for (k, v) in zip("xyz", scope_hull.points[facet].T)},
-                line=dict(color="black", width=0.5),
-                marker=dict(size=0.5),
-            )
-        )
-    site_facets = []
-    for simplex in site_hull.simplices:  # type: ignore
-        facet = np.hstack((simplex, simplex[0]))
-        site_facets.append(
-            go.Scatter3d(
-                **{k: v for (k, v) in zip("xyz", site_hull.points[facet].T)},
-                line=dict(color="blue", width=5),
-                marker=dict(size=2),
-            )
-        )
-    inlets = go.Scatter3d(
-        **{
-            k: v
-            for (k, v) in zip(
-                "xyz", np.vstack([p.inlets for p in paths if len(p.inlets)]).T
-            )
-        },
-        marker=dict(color="green", size=2),
-        mode="markers",
-    )
-    outlets = go.Scatter3d(
-        **{
-            k: v
-            for (k, v) in zip(
-                "xyz", np.vstack([p.outlets for p in paths if len(p.outlets)]).T
-            )
-        },
-        marker=dict(color="red", size=2),
-        mode="markers",
-    )
-
-    lines = []
-    for path in paths:
-        for p in path.incoming:
-            if len(p):
-                lines.append(
-                    go.Scatter3d(
-                        **{k: v for (k, v) in zip("xyz", p.T)},
-                        line=dict(color="blue", width=0.5),
-                        mode="lines",
-                    )
-                )
-        for p in path.outgoing:
-            if len(p):
-                lines.append(
-                    go.Scatter3d(
-                        **{k: v for (k, v) in zip("xyz", p.T)},
-                        line=dict(color="red", width=0.5),
-                        mode="lines",
-                    )
-                )
-        for p in path.collat:
-            if len(p):
-                lines.append(
-                    go.Scatter3d(
-                        **{k: v for (k, v) in zip("xyz", p.T)},
-                        line=dict(color="orange", width=0.5),
-                        mode="lines",
-                    )
-                )
-        for p in path.inside:
-            if len(p):
-                lines.append(
-                    go.Scatter3d(
-                        **{k: v for (k, v) in zip("xyz", p.T)},
-                        line=dict(color="green", width=0.5),
-                        mode="lines",
-                    )
-                )
-    fig = go.Figure(data=(scope, *scope_facets, *site_facets, inlets, outlets, *lines))
-    fig.update_layout(showlegend=False)
-    return fig
 
 
 if __name__ == "__main__":
@@ -566,108 +431,9 @@ if __name__ == "__main__":
             collat
             [12 13 14]
         """
-        scope = np.array(
-            [
-                0,
-                1,
-                1,
-                0,
-                1,
-                1,
-                1,
-                1,
-                0,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                0,
-                0,
-                0,
-                0,
-                1,
-                1,
-                0,
-                1,
-                0,
-                1,
-                1,
-                0,
-            ],
-            dtype=bool,
-        )
-        site = np.array(
-            [
-                0,
-                0,
-                0,
-                0,
-                0,
-                1,
-                1,
-                0,
-                0,
-                0,
-                1,
-                1,
-                0,
-                0,
-                1,
-                1,
-                0,
-                0,
-                1,
-                1,
-                0,
-                1,
-                0,
-                0,
-                1,
-                0,
-                0,
-                1,
-                1,
-            ],
-            dtype=bool,
-        )
-        pos = np.array(
-            [
-                0,
-                1,
-                2,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-                9,
-                10,
-                11,
-                12,
-                13,
-                14,
-                15,
-                16,
-                17,
-                18,
-                19,
-                20,
-                21,
-                22,
-                23,
-                24,
-                25,
-                26,
-                27,
-                28,
-            ],
-            dtype=int,
-        )
+        scope = np.array([0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0], dtype=bool,)
+        site =  np.array([0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 1], dtype=bool,)
+        pos =   np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28], dtype=int,)
         p = Path(0, pos[:, None], site, scope)
         pp = lambda pos: print(" ".join("".join(str(l.flatten())) for l in pos))
         print("pos")
