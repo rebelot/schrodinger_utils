@@ -382,14 +382,14 @@ def plotcgo(paths, site_hull, scope_hull):
         return path_cgo
 
 
-    site_hull_cgo = plot_hull(site_hull, linecolor=to_rgb("cyan"), marker=True, radius=0.05)
-    scope_hull_cgo = plot_hull(scope_hull, linecolor=to_rgb("gray"), marker=True, radius=0.05)
+    site_hull_cgo = plot_hull(site_hull, linecolor=to_rgb("cyan"), marker=True, radius=0.08)
+    scope_hull_cgo = plot_hull(scope_hull, linecolor=to_rgb("gray"), marker=True, radius=0.08)
     inlets_cgo = Cgo.Scatter(
         np.vstack([p.inlets for p in paths if len(p.inlets)]),
-        linecolor=to_rgb("lightblue"), line=False, marker=True, radius=.5,)
+        linecolor=to_rgb("mediumslateblue"), line=False, marker=True, radius=.4,)
     outlets_cgo = Cgo.Scatter(
         np.vstack([p.outlets for p in paths if len(p.outlets)]),
-        linecolor=to_rgb("purple"), line=False, marker=True, radius=.5,)
+        linecolor=to_rgb("tomato"), line=False, marker=True, radius=.4,)
     incoming_cgo = plot_paths(paths, 'incoming', linecolor=to_rgb("mediumslateblue"))
     outgoing_cgo = plot_paths(paths, 'outgoing', linecolor=to_rgb("tomato"))
     inside_cgo = plot_paths(paths, 'inside', linecolor=to_rgb("green"))
