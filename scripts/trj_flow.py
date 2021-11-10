@@ -10,23 +10,32 @@ Date: 2021-11-01
 import argparse
 import multiprocessing as mp
 from typing import List
+import pickle
 
 import numpy as np
 from matplotlib.colors import to_rgb
 from schrodinger.application.desmond.packages import topo, traj, traj_util
 from schrodinger.structutils import analyze
 from scipy.spatial import ConvexHull, Delaunay
+from scipy import interpolate
 from tqdm import tqdm
+from scipy.signal import savgol_filter
+from sklearn.cluster import DBSCAN
 
 # https://stackoverflow.com/questions/16750618/whats-an-efficient-way-to-find-if-a-point-lies-in-the-convex-hull-of-a-point-cl
 # TODO:
-# - [] maybe add support for variable n_atom_per_mol (multiple obj types)
-# - [] multiprocessing
-# - [] mdanalysis 
-# - [] clustering
-# - [] draw volumes
+# - [ ] FIXME: extra care in handling empty paths
+# - [x] : store/load data
+# - [ ] generate some statistics log (i.e n molecules, n paths, mean elapsed time in site)
+# - [ ] mdanalysis 
+# - [ ] maybe add support for variable n_atom_per_mol (multiple obj types)
+# - [x] clustering
+# - [-] path smoothing
+# - [ ] multiprocessing
+# - [x] draw volumes FEAT: make color ramp
 
 class Cgo:
+# http://pymol.sourceforge.net/newman/user/S0500cgo.html
     COLOR     = 6.0
     BEGIN     = 2.0
     END       = 3.0
@@ -72,7 +81,105 @@ class Cgo:
         return cgo
 
 
+class PathCollection:
+    def __init__(self, paths, interpf=None, smoothf=0, splorder=3):
+        self.paths = paths
+        self.interpf = interpf
+        self.smoothf = smoothf
+        self.splorder = splorder
+
+    @property
+    def smooth(self):
+        return self.interpf is not None
+
+    def _collect(self, attr):
+        return [pos for path in self.paths for pos in getattr(path, attr) if len(pos)]
+
+    def _savgol(self, pos, win=5, poly=2):
+        try:
+            return savgol_filter(pos, axis=0, window_length=win, polyorder=poly)
+        except (TypeError, ValueError):
+            return pos
+
+    def _interpsmooth(self, pos):
+        N = len(pos) * self.interpf # type: ignore maybe set a maximum value..
+        try:
+            tck, u = interpolate.splprep(pos.T.tolist(), s=self.smoothf, k=self.splorder)
+            xyz = interpolate.splev(np.linspace(u.min(), u.max(), N), tck)
+            return np.array(xyz).T
+        except TypeError:
+            return pos
+
+    def _smoothdec(func): #type: ignore
+        def wrapper(self, *args, **kwargs):
+            res = func(self, *args, **kwargs) # type: ignore
+            if not self.smooth:
+                return res
+
+            new_res = []
+            for pos in res:
+                new_res.append(self._interpsmooth(pos))
+            return new_res
+        return wrapper
+
+    @property
+    def inlets(self):
+        items = self._collect("inlets")
+        return np.vstack(items) if items else []
+
+    @property
+    def outlets(self):
+        items = self._collect("outlets")
+        return np.vstack(items) if items else []
+
+    @property
+    @_smoothdec # type: ignore
+    def pos(self):
+        return self._collect("pos")
+
+    @property
+    @_smoothdec # type: ignore
+    def incoming(self):
+        return self._collect("incoming")
+
+    @property
+    @_smoothdec # type: ignore
+    def outgoing(self):
+        return self._collect("outgoing")
+
+    @property
+    @_smoothdec # type: ignore
+    def collat(self):
+        return self._collect("collat")
+
+    @property
+    @_smoothdec # type: ignore
+    def inside(self):
+        return self._collect("inside")
+
+
+
 class SubPath:
+    r"""
+    This class stores a subpath, defined as the contiguous set of points for
+    which object is in scope and it has passed at least once from site.
+
+    - A SubPath always begins in scope, either at a boundary or at any point (if it is already there)
+    - A SubPath always ends in scope, either at a boundary or at any point
+      (if it is still there at the end of the simulation)
+    - A SubPath has at least one point within site and scope
+    
+        -----------------------
+        |                   .2|...    Path      = 1 to 4
+        |        _____   ../  |   \   SubPath_1 = 1 to 2
+        |   ....|.....|./   ..|.../   SubPath_2 = 3 to 4
+    0...|1./  4.|..   |    /  |
+        |       |__\__|    :  |       From 2 to 3 object enters scope again, but
+        |           :      :  |       it does not pass from site, thus this not a
+        |           \.3    \..|..     valid subpath.
+        ---------------\-------  \
+                        \......../
+    """
     def __init__(self, pos, in_site):
         self.pos = pos
         self.in_site = in_site
@@ -83,11 +190,10 @@ class SubPath:
         self.outlets = pos[outlets_i]
         self.incoming = pos[: inlets_i[0] + 1] if len(inlets_i) else []
         self.outgoing = pos[outlets_i[-1] :] if len(outlets_i) else []
-        self.collat = (
-            pos[outlets_i[0] : inlets_i[-1] + 1]
-            if len(outlets_i) and len(inlets_i)
-            else []
-        )
+        collat_mask = np.zeros(len(pos), dtype=bool)
+        if len(outlets_i) and len(inlets_i):
+            collat_mask[outlets_i[0] : inlets_i[-1] + 1] = True
+        self.collat = pos[collat_mask & ~in_site]
 
 
 class Path:
@@ -95,10 +201,11 @@ class Path:
     - pos:      set of coordinates containing all and only the points listed below
     - inlets:   the first point inside site each time obj enters site from scope
     - outlets:  the first point outside site (and in scope) each time obj leavs site
-    - incoming: the points from when object enters scope to the first inlet.
-    - outgoing: the points from the last outlet to when object leaves scope.
-    - inside:   the points when object is in site (and in scope).
-    - collat:   the point from the first outlet the last inlet (object leaves site but not scope).
+    - incoming: the sets of points from when object enters scope to the first inlet.
+    - outgoing: the sets of points from the last outlet to when object leaves scope.
+    - inside:   the sets of points when object is in site (and in scope).
+    - collat:   the sets of point from the first outlet the last inlet (object leaves site but not scope).
+    - subpaths: list of SubPath objects generated from this Path. See `trj_flow.SubPath`.
 
     types
     -----
@@ -106,6 +213,7 @@ class Path:
     - pos:  n_subpaths lists of array (n_sub_points, 3)
     - inlets/outlets:   [] or array (n_subpaths, 3)
     - incoming/outgoing/inside/collat: [] or n_subpath lists of array (n_sub_points, 3)
+    - subpaths: list of SubPath
 
     NOTE: all points that are not in scope are ignored, even if they are
     within site. Although this not enforced, site *should* always remain within scope.
@@ -237,33 +345,58 @@ def find_objects_in_hull(
     convex hull of an atom `selection`.
 
     :ojb_gids_bymol: obj gids grouped by molecule, array (n_mol, n_atoms_per_molecule) of int
-    :return: array (n_times, n_obj) of bool: M[i,j] = True if center of mass of
-    obj `j` is within hull at time `i`.
+    :return 1: array (n_times, n_obj) of bool: M[i,j] = True if center of mass of
+        obj `j` is within hull at time `i`.
+    :return 2: list of hull objects 
     """
 
     getpos = getposfunc(obj_gids_bymol.shape[-1])
 
-    # initialize site hull
     hull_gids = topo.asl2gids(cms, hull_asl)  # variable (na_stite!,)
+    is_dynamic = topo.is_dynamic_asl(cms, hull_asl)
 
+    hulls = []
     is_in_hull_matrix = np.empty((len(trj), len(obj_gids_bymol)), dtype=bool)
     for i, fr in enumerate(tqdm(trj)):
         p_obj = getpos(fr, obj_gids_bymol)  # (na_obj, 3)
 
         # dynamic asl
-        if topo.is_dynamic_asl(cms, hull_asl):
+        if is_dynamic:
             cms.setXYZ(fr.pos(cms.allaid_gids))
             hull_gids = topo.asl2gids(cms, hull_asl)  # variable (na_stite!,)
 
         points = fr.pos(hull_gids)  # ndarray(na_site!, 3)
+        hulls.append(ConvexHull(points))
 
         # find which object atoms are found within site hull
         is_in_hull_matrix[i] = (
             Delaunay(points).find_simplex(p_obj) >= 0
         )  # bool ndarray(na_obj,)
 
-    return is_in_hull_matrix
+    return is_in_hull_matrix, hulls
 
+def get_centroids(points, eps=0.5, min_samples=5):
+    db =  DBSCAN(eps=eps, min_samples=min_samples, metric='euclidean').fit(points)
+    labels = db.labels_
+    cc = np.array([points[labels == v].mean(axis=0) for v in set(labels) if v != -1])
+    return cc
+
+def make_hulls(cms, trj, hull_asl):
+    hull_gids = topo.asl2gids(cms, hull_asl)
+    is_dynamic = topo.is_dynamic_asl(cms, hull_asl)
+
+    # allpos = []
+    hulls = []
+    for fr in tqdm(trj):
+        if is_dynamic:
+            cms.setXYZ(fr.pos(cms.allaid_gids))
+            hull_gids = topo.asl2gids(cms, hull_asl)
+
+        hull_pos = fr.pos(hull_gids)
+        hull = ConvexHull(hull_pos)
+        # allpos.append(hull_pos)
+        hulls.append(hull)
+    return hulls # ConvexHull(np.vstack(allpos))
 
 def main():
     parser = argparse.ArgumentParser(description="wip")
@@ -295,6 +428,14 @@ def main():
         default="water and a.e O",
     )
     parser.add_argument("-s", help="slicer", metavar="START:END:STEP")
+    parser.add_argument('-smooth', nargs='?', default=False, const='10,0,2', help='''Smooth obj positions using scipy wrappers of FITPACK.
+            It can be optionally followed by a comma-spearated list of values N,S,O
+            indicating the new number of points factor for interpolation (len(xi) == N*len(x)),
+            the smooth factor and spline order. Default 10,0,2''')
+    parser.add_argument('-save', nargs='?', const=None, default=False, help='store paths data to FILE', metavar='FILE')
+    parser.add_argument('-load', help='load paths data from FILE. Useful for changing visualization parameters', metavar='FILE')
+    parser.add_argument('-clust', default='1,5', help='comma-separated list of DBSCAN clustering parameters: eps,min_samples. Default 1,5')
+    parser.add_argument('-ppa', default=2, type=int, help='points-per-Ångstrom: determine the volume resolution for displaying.')
     args = parser.parse_args()
     # args = parser.parse_args(["aligned-out.cms", "flowtest", "-obj_asl", "water"])
 
@@ -316,43 +457,70 @@ def main():
 
     trj = trj[slicer]
 
-    obj_aids_bymol = analyze.group_by_connectivity(
-        cms, cms.select_atom(obj_asl)
-    )  # (n_mol, n_at_per_mol)
-    obj_gids_bymol = np.array(
-        [topo.aids2gids(cms, group) for group in obj_aids_bymol], dtype=int, ndmin=2
-    )
+    if args.load:
+        print(f'Intermediate data loaded from {args.load}')
+        with open(args.load, 'rb') as f:
+            paths, site_hulls, scope_hulls = pickle.load(f)
+    else:
+        obj_aids_bymol = analyze.group_by_connectivity(cms, cms.select_atom(obj_asl))  # (n_mol, n_at_per_mol)
+        obj_gids_bymol = np.array([topo.aids2gids(cms, group) for group in obj_aids_bymol], dtype=int, ndmin=2)
 
-    print("Selecting objects to track...")
-    obj_in_site_matrix = find_objects_in_hull(cms, trj, obj_gids_bymol, site_asl)
+        print("Selecting objects to track...", flush=True)
+        obj_in_site_matrix, site_hulls = find_objects_in_hull(cms, trj, obj_gids_bymol, site_asl)
 
-    # find indices of the objects that enter site at least once
-    obj_ok_i = np.nonzero(np.any(obj_in_site_matrix, axis=0))[0]
-    obj_gids_bymol_ok = obj_gids_bymol[obj_ok_i, :]
+        # find indices of the objects that enter site at least once
+        obj_ok_i = np.nonzero(np.any(obj_in_site_matrix, axis=0))[0]
+        obj_gids_bymol_ok = obj_gids_bymol[obj_ok_i, :]
+        print("Done.")
+
+        print("Checking scope...", flush=True)
+        obj_in_scope_matrix, scope_hulls = find_objects_in_hull(cms, trj, obj_gids_bymol_ok, scope_asl)
+        print("Done.")
+
+        print("Building Paths...", flush=True)
+        paths = Path.make_paths(
+            trj,
+            obj_gids_bymol_ok,
+            obj_in_site_matrix[:, obj_ok_i],
+            obj_in_scope_matrix,
+        )
+
+        if args.save != False:
+            fname = args.save or args.out
+            print(f'Intermediate data stored to {fname}')
+            with open(fname, 'wb') as f:
+                pickle.dump((paths, site_hulls, scope_hulls), f)
+
+    if args.smooth:
+        _interpf, _smoothf, _splorder = args.smooth.split(',')
+        _interpf, _smoothf, _splorder = int(_interpf), float(_smoothf), int(_splorder)
+    else:
+        _interpf, _smoothf, _splorder = [None] * 3
+    paths = PathCollection(paths, interpf=_interpf, smoothf=_smoothf, splorder=_splorder)
     print("Done.")
 
-    print("Checking scope...")
-    obj_in_scope_matrix = find_objects_in_hull(cms, trj, obj_gids_bymol_ok, scope_asl)
+    print("Clustering...", end=' ', flush=True)
+    _eps, _min_samples = args.clust.split(',')
+    _eps, _min_samples = float(_eps), int(_min_samples)
+    inlets_c = get_centroids(paths.inlets, eps=_eps, min_samples=_min_samples) if len(paths.inlets) else []
+    outlets_c = get_centroids(paths.outlets, eps=_eps, min_samples=_min_samples) if len(paths.outlets) else []
     print("Done.")
 
-    print("Building Paths...")
-    paths = Path.make_paths(
-        trj,
-        obj_gids_bymol_ok,
-        obj_in_site_matrix[:, obj_ok_i],
-        obj_in_scope_matrix,
-    )
-    print("Done.")
+    # print("Calculating convex hulls for displaying...", flush=True)
+    # scope_hulls = make_hulls(cms, trj, scope_asl)
+    # site_hulls = make_hulls(cms, trj, site_asl)
+    # print("Done.")
+    # scope_hull = ConvexHull(trj[0].pos(topo.asl2gids(cms, scope_asl)))
+    # site_hull = ConvexHull(trj[0].pos(topo.asl2gids(cms, site_asl)))
+    # scope_p = trj[0].pos(topo.asl2gids(cms, scope_asl))
 
-    scope_hull = ConvexHull(trj[0].pos(topo.asl2gids(cms, scope_asl)))
-    site_hull = ConvexHull(trj[0].pos(topo.asl2gids(cms, site_asl)))
-    scope_p = trj[0].pos(topo.asl2gids(cms, scope_asl))
-
-    print("Rendering...")
-
-    script = plotcgo(paths, site_hull, scope_hull)
+    print("Rendering...", flush=True)
+    script = render_pymol(paths, site_hulls, scope_hulls, inlets_c, outlets_c, ppa=args.ppa, name=args.out)
     with open(args.out + "_pymol.py", "w") as f:
         f.write(script)
+        print("  " + args.out + "_pymol.py", 'written.')
+    print('Done.')
+
     print("All done.\n\n")
     print("""
       .-``'.     S T A Y   W I T H     .'''-.
@@ -364,7 +532,7 @@ _.-'     '._        ~ F L O W ~         _.'     '-._
     return
 
 
-def plotcgo(paths, site_hull, scope_hull):
+def render_pymol(paths, site_hulls, scope_hulls, inlets_c, outlets_c, ppa=10, name='flow'):
 
     def plot_hull(hull, *args, **kwargs):
         hull_cgo = Cgo()
@@ -375,43 +543,191 @@ def plotcgo(paths, site_hull, scope_hull):
 
     def plot_paths(paths, attr, *args, **kwargs):
         path_cgo = Cgo()
-        for path in paths:
-            for p in getattr(path, attr):
-                if len(p):
-                    path_cgo.scatter(p, *args, **kwargs)
+        # for path in paths:
+        for p in getattr(paths, attr):
+            # if len(p):
+            path_cgo.scatter(p, *args, **kwargs)
         return path_cgo
 
 
-    site_hull_cgo = plot_hull(site_hull, linecolor=to_rgb("cyan"), marker=True, radius=0.08)
-    scope_hull_cgo = plot_hull(scope_hull, linecolor=to_rgb("gray"), marker=True, radius=0.08)
-    inlets_cgo = Cgo.Scatter(
-        np.vstack([p.inlets for p in paths if len(p.inlets)]),
-        linecolor=to_rgb("mediumslateblue"), line=False, marker=True, radius=.4,)
-    outlets_cgo = Cgo.Scatter(
-        np.vstack([p.outlets for p in paths if len(p.outlets)]),
-        linecolor=to_rgb("tomato"), line=False, marker=True, radius=.4,)
+    site_hull_cgos = [plot_hull(hull, linecolor=to_rgb("cyan"), marker=True, radius=0.08) for hull in site_hulls]
+    scope_hull_cgos = [plot_hull(hull, linecolor=to_rgb("gray"), marker=True, radius=0.08) for hull in scope_hulls]
+    inlets_cgo = Cgo.Scatter(paths.inlets, linecolor=to_rgb("mediumslateblue"), line=False, marker=True, radius=.1,)
+    outlets_cgo = Cgo.Scatter(paths.outlets, linecolor=to_rgb("tomato"), line=False, marker=True, radius=.1,)
+    inlets_c_cgo = Cgo.Scatter(inlets_c, linecolor=to_rgb("mediumslateblue"), line=False, marker=True, radius=.5,)
+    outlets_c_cgo = Cgo.Scatter(outlets_c, linecolor=to_rgb("tomato"), line=False, marker=True, radius=.5,)
     incoming_cgo = plot_paths(paths, 'incoming', linecolor=to_rgb("mediumslateblue"))
     outgoing_cgo = plot_paths(paths, 'outgoing', linecolor=to_rgb("tomato"))
     inside_cgo = plot_paths(paths, 'inside', linecolor=to_rgb("green"))
     collat_cgo = plot_paths(paths, 'collat', linecolor=to_rgb("gold"))
 
-    script = f"""
-from pymol import cmd
+    allpos = np.vstack(paths.pos)
+    extent = np.ptp(allpos, axis=0)
+    nbins = np.round(extent * ppa).astype(int)
+    # density, edges = np.histogramdd(allpos, bins=nbins)
+    density, edges = np.histogramdd(allpos, bins=nbins, density=True)
+    density = -np.log(np.maximum(density, 1e-16))
+    spacing = np.ptp(allpos, axis=0) / nbins
+    minmax = np.array([(e.min(), e.max()) for e in edges]).T
 
-cmd.load_cgo({site_hull_cgo.obj}, "site_hull", 1)
-cmd.load_cgo({scope_hull_cgo.obj}, "scope_hull", 1)
-cmd.load_cgo({incoming_cgo.obj}, "incoming", 1)
-cmd.load_cgo({outgoing_cgo.obj}, "outgoing", 1)
-cmd.load_cgo({inside_cgo.obj}, "inside", 1)
-cmd.load_cgo({collat_cgo.obj}, "collat", 1)
-cmd.load_cgo({inlets_cgo.obj}, "inlets", 1)
-cmd.load_cgo({outlets_cgo.obj}, "outlets", 1)
-    """
+    data = {
+        "name": name,
+        "site_hull": [cgo.obj for cgo in site_hull_cgos],
+        "scope_hull": [cgo.obj for cgo in scope_hull_cgos],
+        "inlets": inlets_cgo.obj,
+        "outlets": outlets_cgo.obj,
+        "inlets_c": inlets_c_cgo.obj,
+        "outlets_c": outlets_c_cgo.obj,
+        "incoming": incoming_cgo.obj,
+        "outgoing": outgoing_cgo.obj,
+        "inside": inside_cgo.obj,
+        "collat": collat_cgo.obj,
+        "density": density,
+        "gridspacing": spacing,
+        "minmax": minmax
+        }
+
+    with open(name + '_pymoldata.pickle', 'wb') as f:
+        pickle.dump(data, f)
+        print("  " + name + "_pymoldata.pickle", 'written.')
+
+    script = f"""
+# Generated by flow.py
+
+import pickle
+import numpy as np
+from pymol import cmd
+from chempy.brick import Brick
+
+with open(f'{name}_pymoldata.pickle', 'rb') as f:
+    data = pickle.load(f)
+
+name = data['name']
+
+cmd.load_cgo(data["incoming"], name + "_incoming", 1)
+cmd.load_cgo(data["outgoing"], name + "_outgoing", 1)
+cmd.load_cgo(data["inside"], name + "_inside", 1)
+cmd.load_cgo(data["collat"], name + "_collat", 1)
+cmd.load_cgo(data["inlets"], name + "_inlets", 1)
+cmd.load_cgo(data["outlets"], name + "_outlets", 1)
+cmd.load_cgo(data["inlets_c"], name + "_inlets_centroids", 1)
+cmd.load_cgo(data["outlets_c"], name + "_outlets_centroids", 1)
+
+for i, (site_hull, scope_hull) in enumerate(zip(data['site_hull'], data['scope_hull'])):
+    cmd.load_cgo(site_hull, name + "_site_hull", i + 1)
+    cmd.load_cgo(scope_hull, name + "_scope_hull", i + 1)
+
+density = data['density']
+gridspacing = data['gridspacing']
+mn, mx = data['minmax']
+brick = Brick.from_numpy(density, gridspacing)
+brick.origin = list(mn)
+brick.range = list(mx - mn)
+cmd.load_brick(brick, name + '_map')
+
+alpha = 0.2
+colors = reversed([
+    [0.00, 0.00, 1.00],
+    [0.00, 1.00, 1.00],
+    [0.00, 1.00, 0.00],
+    [1.00, 1.00, 0.00],
+    [1.00, 0.50, 0.00],
+    [1.00, 0.00, 0.00],
+])
+# dnz = np.log(density[np.nonzero(density)])
+dnz = density[density > 1e-16]
+spacing = np.ptp(dnz)/6
+w = spacing/4
+ramp_iso = np.linspace(dnz.min() + w, dnz.max() - w, 6)
+
+ramp = []
+for iso, c in zip(ramp_iso, colors):
+    ramp += [iso - w] + c + [0]
+    ramp += [iso]     + c + [alpha]
+    ramp += [iso + w] + c + [0]
+
+cmd.volume_ramp_new('flow_ramp', ramp)
+cmd.volume(name + "_volume", name + "_map", "flow_ramp")
+"""
     return script
 
 
 if __name__ == "__main__":
+    def testplot(path, win, poly):
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+        fig = plt.figure(figsize=plt.figaspect(0.5))
+        
+        axx = fig.add_subplot(3,2,1)
+        axy = fig.add_subplot(3,2,3)
+        axz = fig.add_subplot(3,2,5)
+        ax3 = fig.add_subplot(1,2,2, projection='3d')
 
+        axx.plot(path[:,0])
+        axy.plot(path[:,1])
+        axz.plot(path[:,2])
+        ax3.plot3D(*path.T)
+
+        path_s = savgol_filter(path, axis=0, window_length=win, polyorder=poly)
+
+        axx.plot(path_s[:,0])
+        axy.plot(path_s[:,1])
+        axz.plot(path_s[:,2])
+        ax3.plot3D(*path_s.T)
+        ax3.set_title(f'{win=} {poly=}')
+        plt.tight_layout()
+
+    def testplot(path, s=2, N=1000):
+        # https://stackoverflow.com/questions/18962175/spline-interpolation-coefficients-of-a-line-curve-in-3d-space
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+        from scipy import interpolate
+        fig = plt.figure(figsize=plt.figaspect(0.5))
+        
+        axx = fig.add_subplot(3,2,1)
+        axy = fig.add_subplot(3,2,3)
+        axz = fig.add_subplot(3,2,5)
+        ax3 = fig.add_subplot(1,2,2, projection='3d')
+
+        x, y, z = path.T
+        axx.plot(np.linspace(x.min(), x.max(), len(x)), x)
+        axy.plot(np.linspace(y.min(), y.max(), len(y)), y)
+        axz.plot(np.linspace(z.min(), z.max(), len(z)), z)
+        ax3.plot3D(*path.T, '-o')
+
+        tck, u = interpolate.splprep(path.T.tolist(), s=s)
+        x, y, z = interpolate.splev(np.linspace(u.min(),u.max(),N), tck)
+
+
+        axx.plot(np.linspace(x.min(), x.max(), len(x)), x)
+        axy.plot(np.linspace(y.min(), y.max(), len(y)), y)
+        axz.plot(np.linspace(z.min(), z.max(), len(z)), z)
+        ax3.plot3D(x, y, z)
+        ax3.set_title(f'{s=} {N=}')
+        plt.tight_layout()
+
+    def testclust(points, eps=0.5, min_samples=5):
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+        from sklearn.metrics import silhouette_score
+
+        db = DBSCAN(eps=eps, min_samples=min_samples, metric='euclidean').fit(points)
+        labels = db.labels_
+        core_samples_mask = np.zeros_like(labels, dtype=bool)
+        core_samples_mask[db.core_sample_indices_] = True
+        n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+        n_noise_ = list(labels).count(-1)
+        print("Estimated number of clusters: %d" % n_clusters_)
+        print("Estimated number of noise points: %d" % n_noise_)
+        print("Silhouette Coefficient: %0.3f" % silhouette_score(points, labels))
+
+        ax = Axes3D(plt.figure())
+        ax.scatter3D(*points[core_samples_mask].T, c=labels[core_samples_mask], s=50)
+        ax.scatter3D(*points[~core_samples_mask].T, c=labels[~core_samples_mask], s=1)
+
+
+
+    
     def test():
         """
         doctest
@@ -435,21 +751,22 @@ if __name__ == "__main__":
         site =  np.array([0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 1], dtype=bool,)
         pos =   np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28], dtype=int,)
         p = Path(0, pos[:, None], site, scope)
+        pc = PathCollection([p])
         pp = lambda pos: print(" ".join("".join(str(l.flatten())) for l in pos))
         print("pos")
-        pp(p.pos)
+        pp(pc.pos)
         print("inlets")
-        pp(p.inlets)
+        pp(pc.inlets)
         print("outlets")
-        pp(p.outlets)
+        pp(pc.outlets)
         print("incoming")
-        pp(p.incoming)
+        pp(pc.incoming)
         print("outgoing")
-        pp(p.outgoing)
+        pp(pc.outgoing)
         print("inside")
-        pp(p.inside)
+        pp(pc.inside)
         print("collat")
-        pp(p.collat)
+        pp(pc.collat)
         print()
         for i, sp in enumerate(p.subpaths):
             print("---", "subpath", i, "---")
