@@ -42,6 +42,8 @@ that is the directory that contains the project. If you keep only one project pe
 
 **Useful references**:
 * https://www.protocols.io/view/how-to-assign-charmm-parameters-to-desmond-generat-bp53mq8n
+* https://www.protocols.io/view/how-to-assign-amber-parameters-to-desmond-generate-byyqpxvw (convert antechamber output)
+* http://dx.doi.org/10.17504/protocols.io.byyqpxvw
 * http://groups.google.com/group/desmond-md-users
 
 **Command-line tools**:
