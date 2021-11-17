@@ -507,25 +507,24 @@ def main():
     obj_asl = args.obj_asl
     site_asl = args.site_asl
 
-    if args.t:
-        msys, cms = topo.read_cms(args.cms)
-        trj = traj.read_traj(args.t)
-    else:
-        msys, cms, trj = traj_util.read_cms_and_traj(args.cms)
-
-    slicer = (
-        slice(*[int(i) if i else None for i in args.s.split(":")])
-        if args.s
-        else slice(None, None)
-    )
-
-    trj = trj[slicer]
-
     if args.load:
         print(f'Intermediate data loaded from {args.load}')
         with open(args.load, 'rb') as f:
             paths, site_hulls, scope_hulls = pickle.load(f)
     else:
+        if args.t:
+            msys, cms = topo.read_cms(args.cms)
+            trj = traj.read_traj(args.t)
+        else:
+            msys, cms, trj = traj_util.read_cms_and_traj(args.cms)
+
+        slicer = (
+            slice(*[int(i) if i else None for i in args.s.split(":")])
+            if args.s
+            else slice(None, None)
+        )
+        trj = trj[slicer]
+
         obj_aids_bymol = analyze.group_by_connectivity(cms, cms.select_atom(obj_asl))  # (n_mol, n_at_per_mol)
         obj_gids_bymol = np.array([topo.aids2gids(cms, group) for group in obj_aids_bymol], dtype=int, ndmin=2)
 
