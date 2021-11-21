@@ -1,0 +1,156 @@
+# Schrodinger hosts file
+#
+# The hosts file consists of a series of entries, each describing a
+# 'host' (machine) on which jobs can be run.  See the Installation
+# Guide for a description of the settings that can be made here.
+#
+###############################  NOTE  ################################
+# The 'localhost' entry is special:
+# * Settings in the 'localhost' entry are implicitly included in
+#   every other host entry as well, so settings common to all entries
+#   can be placed in the localhost entry.
+# * The 'schrodinger:', 'host:' and 'queue:' fields may not be used in
+#   the localhost entry.
+#######################################################################
+
+
+name:        localhost
+schrodinger: /sw/schrodinger/VERSION/
+processors:  10
+tmpdir:      /scratch
+gpgpu:       0, RTX 2080Ti
+gpgpu:       1, RTX 2080 Ti
+env:         SCHRODINGER_CUDA_VISIBLE_DEVICES="0, 1"
+
+name:        xlence1GPU
+host:        xlence.disfeb.unimi.it
+queue:       SLURM2.1
+schrodinger: /sw/schrodinger/VERSION/
+qargs:       -n 1 --gres=gpu:1 --partition=normal -A eberini 
+User:        USERNAME
+env:         SCHRODINGER=/sw/schrodinger/VERSION/
+env:         SCHRODINGER_THIRDPARTY=/sw/schrodinger/VERSION/thirdparty
+env:         MAESTRO_TEMP_LOCATION=/scratch
+env:         SCHROD_LICENSE_FILE=27008@159.149.32.81
+tmpdir:      /scratch
+processors:  1
+gpgpu:       0, RTX 2080 Ti
+gpgpu:       1, RTX 2080 Ti
+env:         SCHRODINGER_CUDA_VISIBLE_DEVICES="0, 1"
+
+name:        xlenceNGPU
+host:        xlence.disfeb.unimi.it
+queue:       SLURM2.1
+schrodinger: /sw/schrodinger/VERSION/
+qargs:       -n %NPROC% --gres=gpu:1:%NPROC% --partition=normal -A eberini 
+User:        USERNAME
+env:         SCHRODINGER=/sw/schrodinger/VERSION/
+env:         SCHRODINGER_THIRDPARTY=/sw/schrodinger/VERSION/thirdparty
+env:         MAESTRO_TEMP_LOCATION=/scratch
+env:         SCHROD_LICENSE_FILE=27008@159.149.32.81
+tmpdir:      /scratch
+processors:  8
+gpgpu:       0, RTX 2080 Ti
+gpgpu:       1, RTX 2080 Ti
+env:         SCHRODINGER_CUDA_VISIBLE_DEVICES="0, 1"
+
+
+name:        xlence1task
+host:        xlence.disfeb.unimi.it
+queue:       SLURM2.1
+schrodinger: /sw/schrodinger/VERSION/
+qargs:       -n 1 -c 1 --partition=normal -A eberini 
+User:        USERNAME
+env:         SCHRODINGER=/sw/schrodinger/VERSION/
+env:         SCHRODINGER_THIRDPARTY=/sw/schrodinger/VERSION/thirdparty
+env:         MAESTRO_TEMP_LOCATION=/scratch
+env:         SCHROD_LICENSE_FILE=27008@159.149.32.81
+tmpdir:      /scratch
+processors:  40
+
+name:        xlence1taskALL
+host:        xlence.disfeb.unimi.it
+queue:       SLURM2.1
+schrodinger: /sw/schrodinger/VERSION/
+qargs:       -n 1 -c 1 --partition=all -A eberini 
+User:        USERNAME
+env:         SCHRODINGER=/sw/schrodinger/VERSION/
+env:         SCHRODINGER_THIRDPARTY=/sw/schrodinger/VERSION/thirdparty
+env:         MAESTRO_TEMP_LOCATION=/scratch
+env:         SCHROD_LICENSE_FILE=27008@159.149.32.81
+tmpdir:      /scratch
+processors:  56
+
+name:        xlence1taskVPN
+host:        192.168.60.11
+queue:       SLURM2.1
+schrodinger: /sw/schrodinger/VERSION/
+qargs:       -n 1 -c 1 --partition=normal -A eberini 
+User:        USERNAME
+env:         SCHRODINGER=/sw/schrodinger/VERSION/
+env:         SCHRODINGER_THIRDPARTY=/sw/schrodinger/VERSION/thirdparty
+env:         MAESTRO_TEMP_LOCATION=/scratch
+env:         SCHROD_LICENSE_FILE=27008@159.149.32.81
+tmpdir:      /scratch
+processors:  40
+
+name:        xlence_custom
+host:        xlence.disfeb.unimi.it
+queue:       SLURM2.1
+schrodinger: /sw/schrodinger/VERSION/
+qargs:       -N 1 -n %NPROC% -c %TPP% -p normal -A eberini
+User:        USERNAME
+env:         SCHRODINGER=/sw/schrodinger/VERSION/
+env:         SCHRODINGER_THIRDPARTY=/sw/schrodinger/VERSION/thirdparty
+env:         MAESTRO_TEMP_LOCATION=/scratch
+env:         SCHROD_LICENSE_FILE=27008@159.149.32.81
+tmpdir:      /scratch
+processors:  10
+
+# Should be tailored for PIPER, JAGUAR and QUATUM ESPRESSO
+name:        xlenceOMPI
+host:        xlence.disfeb.unimi.it
+queue:       SLURM2.1
+schrodinger: /sw/schrodinger/VERSION/
+# qargs:       -N %NPROC/TPP% -n %TPP% -p normal -A eberini
+qargs:       -n %NPROC% -c %TPP% -p normal -A eberini
+User:        USERNAME
+env:         SCHRODINGER=/sw/schrodinger/VERSION/
+env:         SCHRODINGER_THIRDPARTY=/sw/schrodinger/VERSION/thirdparty
+env:         MAESTRO_TEMP_LOCATION=/scratch
+env:         SCHROD_LICENSE_FILE=27008@159.149.32.81
+tmpdir:      /scratch
+processors:  40
+
+# Examples:
+
+# OpenMP on one node
+# --nodes 1
+# --ntasks-per-node 1
+# --cpu-per-task <MP-Subprocess>
+ 
+# MPI
+# --nodes <MPI-Processes>
+# --ntasks-per-node <ThreadsPerProcess>
+# --cpu-per-task 1
+ 
+# Hybrid OpenMP/MPI
+# --nodes <MPI-Processes>
+# --ntasks-per-node <ThreadsPerProcess>
+# --cpu-per-task <MP-Subprocess>
+
+# Request OpenMPI %NPROC% processors with an arbitrary cpu topology
+# --ntasks=%NPROC%
+
+# Request OpenMPI %NPROC% processors, one on each node
+# --nodes=1
+# --ntasks-per-node=%NPROC%
+
+# Request OpenMPI %NPROC% processors, spread across nodes, 2 cores per node
+# --nodes=%NPROC/2%
+# --ntasks-per-node=2
+
+# Parallel Hybrid OpenMPI/OpenMP.
+# Request %NPROC% total threads, with %TPP% threads per node.
+# --nodes=%NPROC/TPP%
+# --ntasks-per-node=%TPP%
