@@ -224,14 +224,28 @@ Then place the content of `bias.ark` in the `.cms` or `.cfg` files (as described
     sexp=[...]
     metadynamics_accumulators=[] storage={...} name="bias" first=0.0 interval=20.0}}
 }
+
 ```
 Indentation is not relevant in any way, but make sure that closing parentheses `{}` are paired correctly.
 
 Change the beginning of the ark output from:
+
 ```
 force.term{list[+]=ES ES=force.term{list[+]=ES ES={type=enhanced_sampling ...
 ```
+
 to:
+
 ```
 backend.force.term = { list[+]=ES ES={type=enhanced_sampling ... }
 ```
+
+## Fragment-based ligand docking
+from https://www.schrodinger.com/kb/582
+
+* Increase the initial number of poses per ligand kept from 5000 to 50000;
+* Widen the scoring window from 100.0 to 500.0;
+* Increase the number of minimized poses per ligand to 1000;
+* Select "Use expanded sampling".
+
+Fragments are located in `$SCHRODINGER/glide-v9.3/data/glide/`
