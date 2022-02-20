@@ -32,6 +32,8 @@ For anyone interested, please contact me at: tommaso.laurenzi@unimi.it or open a
 - **maestro_resdist_v2.py**: WIP, no GUI. As above, but structures need not be the same, read residue mapping from alignment.
 - **maestro_select_by_b_factor.py**: Select residues with B factor above threshold within selection.
 - **maestro_transform.py**: GUI to Rotate and Translate workspace structures. Transformations are applied relative to selected reference or to absolute coordinates.
+- **map_interactions_to_structure.py**: Functions to parse `trj_interactions.py` output and map residue interactions to the workspace structure.
+- **parse_prime_interaction_energies.py**: Functions to parse `prime_calcenergy` output and map interaction energies to workspace structure.
 
 ### Docs
 - **schrodinger_tips.md**: Some general tips and obscure features.
