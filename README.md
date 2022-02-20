@@ -1,6 +1,6 @@
 # schrodinger_utils
 
-Various integrations to the [Schrodinger](https://www.schrodinger.com/) ecosystem. With major interest on 
+Various integrations to the [Schrodinger](https://www.schrodinger.com/) ecosystem. With major interest on
 analysis tools for Molecular Dynamics simulations run with Desmond.
 
 Please understand that this work is primarily meant to be used by co-workers and students of the LBBC lab @ University of Milan. Majority of the code was written during my Master/PhD and it was not originally meant to be shared, thus documentation must be improved.
@@ -9,23 +9,26 @@ Although -for the time being- this code is not optimized for general use, you ca
 For anyone interested, please contact me at: tommaso.laurenzi@unimi.it or open an issue.
 
 **IMPORTANT**:
+
 - Some plugins/scripts are still work in progress.
-- Some plugins/scripts were written a long time ago, when I first started programming and I had limited knowledge of the Schrodinger API. Thus, despite best efforts, *may not* contain state-of-the-art code.
+- Some plugins/scripts were written a long time ago, when I first started programming and I had limited knowledge of the Schrodinger API. Thus, despite best efforts, _may not_ contain state-of-the-art code.
 - `trjpeek.sh` and `mkhosts.sh` scripts contain hardcoded parameters that only make sense if you work with us.
 - Some major tools, like `mi.py` for calculating Generalized correlations matrix, and `flow.py` to track the paths of certain molecules are also actively developed [here](https://github.com/uliano/xlence_scripts) and supporting other formats via MDAnalyis. These tools may soon find a new home.
 
 ## Overview
+
 - Maestro plugins
 - Docs
 - Shell scripts
 - Input templates
 
 ### Plugins for Maestro
+
 - **maestro_applycscheme.py**: Map data to atom colors, requires python repl, exports `map2color()` function.
 - **maestro_dummy_at_center_of_mass.py**: Add dummy atom at center of mass of current selection as a separate entry.
 - **maestro_interacting.py**: Select interacting atoms between two groups or in current selection.
 - **maestro_moi.py**: Draw principal moments of inertia of selected atoms.
-- **maestro_notes.py**: Add and manage notes. Notes are added to *project table* entries as properties
+- **maestro_notes.py**: Add and manage notes. Notes are added to _project table_ entries as properties
 - **maestro_pbitches.py**: Gain control over periodic box wrapping in the workspace. Make PBCs your ...
 - **maestro_renumber.py**: Better residue renumbering GUI.
 - **maestro_resdist.py**: Calculate per-residue distances between multiple versions of the same structure. Draws plots and consensus structure.
@@ -36,9 +39,11 @@ For anyone interested, please contact me at: tommaso.laurenzi@unimi.it or open a
 - **parse_prime_interaction_energies.py**: Functions to parse `prime_calcenergy` output and map interaction energies to workspace structure.
 
 ### Docs
+
 - **schrodinger_tips.md**: Some general tips and obscure features.
 
 ### Scripts
+
 - **mi.py**: Compute Mutal Information (Shannon Entropy / Generalized Correlations) matrix of selected atoms within Desmond Molecular Dynamics trajectory.
 - **trj_flow.py**: Track trajectories of molecules that pass within a certain region during Molecular Dynamics.
 - **trj_act.py**: Align, Center and Translate stuff in Desmond trajectories.
@@ -66,9 +71,9 @@ For anyone interested, please contact me at: tommaso.laurenzi@unimi.it or open a
 - **\_schrun**: WIP zsh completion function. Its generation could be automated by parsing help messages.
 
 ### Templates and obscure input files commands
+
 - **minimize.msj**
 - **simulate.msj**
 - **system-builder_template.csb**
 - **system-setup.msj**
 - **schrodinger.hosts.template**
-
