@@ -3,7 +3,6 @@ import re
 import numpy as np
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
-from schrodinger import maestro
 
 CT = "m_psp_residue_interaction_energies"
 
@@ -93,6 +92,12 @@ def merge_res(data, indices):
     return resinterdict
 
 
+def write_interdict(filename, interdict):
+    with open(filename) as f:
+        for k, v in interdict.items():
+            f.write(k + " " + v + "\n")
+
+
 def key2asl(key):
     chain, name_num = key.split(":")
     resname, resnum = name_num.split("_")
@@ -101,6 +106,7 @@ def key2asl(key):
 
 
 def color_atoms(data: dict, cmap):
+    from schrodinger import maestro
     ws = maestro.workspace_get()
 
     vmin = min(data.values())
