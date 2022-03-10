@@ -249,7 +249,7 @@ if __name__ == "__main__":
     args.add_argument('-s', '--slice', help='slice trajectory START:END:STEP')
     args.add_argument('-split_trj', help='save cluster frames in trajectories', action='store_true')
     args.add_argument('-m', '--method', choices=['closest', 'largest'],
-                      help='crietrion to assign frames to medoids', default='closest')
+                      help='crietrion to assign frames to medoids. Default "closest" (ucluster)', default='closest')
     args = args.parse_args()
 
     slicer = slice(None)
