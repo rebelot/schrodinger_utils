@@ -27,14 +27,15 @@ Get this fancy visualization of stuff interacting with membranes:
         formatter_class=RawDescriptionHelpFormatter,
     )
     parser.add_argument("cms", help="Input cms file")
-    parser.add_argument("trj", help="Input trajectory dir")
     parser.add_argument("out", help="output basename")
-    parser.add_argument( "-e", action="append",
+    parser.add_argument("-t", help="Input trajectory dir")
+    parser.add_argument("-e", action="append",
         help="""Expression in the form of ASL:MODE[:DIMS or :REF], where:
 ASL is the asl expression specifying the selection to acts upon; 
 MODE = center or align; DIMS is a comma-separated list of dimension (X = 0, Y = 1, Z = 2) for centering, default is 0,1,2;
 REF is the index of the frame used as reference positions for alignment, default is 0.
 Multiple expressions can be provided and will be executed sequentially from left to right.
+If expr is either 'uliano', 'boomer', 'default', 'magic' or 'fai tu', the behavior is "a.pt CA:align".
 Note that alignment will also automatically perform centering.
 e.g: -e "protein:center:0,1" will center the protein on the XY plane;
 -e "membrane:center:2" will center the membrane on the Z axis;
@@ -44,13 +45,18 @@ e.g: -e "protein:center:0,1" will center the protein on the XY plane;
             e.g.: -off "::0.5" will translate atoms upwards by half of the simulation box "c" axis', default=None)
     args = parser.parse_args()
 
-    msys, cms = topo.read_cms(args.cms)
-    trj: typing.List[traj.Frame] = traj.read_traj(args.trj)
+    if args.t:
+        msys, cms = topo.read_cms(args.cms)
+        trj: typing.List[traj.Frame] = traj.read_traj(args.t)
+    else:
+        msys, cms, trj = traj_util.read_cms_and_traj(args.cms)
 
     pfx = pfx_module.Pfx(msys.glued_topology, fixbonds=True)
 
     for expr in args.e:
         print("Executing", expr)
+        if expr in ('uliano', 'boomer', 'default', 'magic', 'fai tu'):
+            expr = 'a.pt CA:align'
         expr = expr.split(":")
         opt = None
         if len(expr) == 2:
