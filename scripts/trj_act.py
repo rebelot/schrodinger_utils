@@ -47,7 +47,7 @@ e.g: -e "protein:center:0,1" will center the protein on the XY plane;
 
     if args.t:
         msys, cms = topo.read_cms(args.cms)
-        trj: typing.List[traj.Frame] = traj.read_traj(args.t)
+        trj = traj.read_traj(args.t)
     else:
         msys, cms, trj = traj_util.read_cms_and_traj(args.cms)
 
