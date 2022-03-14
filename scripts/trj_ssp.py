@@ -30,7 +30,7 @@ def main():
         ax[1].pcolormesh([fr.time for fr in trj], [int(r[6:]) for r in rkey], ss.T)
         ax[1].set_xlabel('time (ps)')
         ax[1].set_ylabel('residue nr.')
-        plt.savefig(args.o + '.png')
+        plt.savefig(args.out + '.png')
 
     with open(args.out + '_mean.dat', 'w') as fh:
         for fr, sse in zip(trj, ss):
