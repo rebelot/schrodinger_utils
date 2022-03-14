@@ -10,9 +10,9 @@ def main():
     parser = argparse.ArgumentParser(
         description='Calculate Secondary Structure along trajectory.')
     parser.add_argument('cms', help="Input cms file.")
+    parser.add_argument('out', help="Output filename.")
     parser.add_argument(
         '-ASL', help="Atom selection for secondary structure calculation, default is 'protein'", default='protein')
-    parser.add_argument('-o', help="Output filename.")
     parser.add_argument('-p', help="Plot results", action='store_true')
     args = parser.parse_args()
 
@@ -32,13 +32,19 @@ def main():
         ax[1].set_ylabel('residue nr.')
         plt.savefig(args.o + '.png')
 
-    fh = open(args.o + '.dat', 'w') if args.o else sys.stdout
-    for fr, sse in zip(trj, ss):
-        fh.write(f"{fr.time} {sse[sse > 0].sum() / len(sse)}\n")
+    with open(args.out + '_mean.dat', 'w') as fh:
+        for fr, sse in zip(trj, ss):
+            fh.write(f"{fr.time},{np.count_nonzero(sse)/len(sse)}\n")
     # TODO: make some effort to store the existence matrix in a more convenient format!
-    for fr, sse in zip(trj, ss):
-        fh.write(f"{fr.time}, {', '.join(str(x) for x in sse)}\n")
-    fh.close()
+    with open(args.out + '_mat.dat', 'w') as fh:
+        fh.write('#time,' + ','.join(rkey) + '\n')
+        for fr, sse in zip(trj, ss):
+            fh.write(f"{fr.time},{','.join(str(x) for x in sse)}\n")
+    with open(args.out + '_res.dat', 'w') as fh:
+        fh.write('#res,helix,strand\n')
+        for res, sse in zip(rkey, ss.T):
+            fh.write(f"{res},{','.join(str(x) for x in np.count_nonzero(sse == 1))},{','.join(str(x) for x in np.count_nonzero(sse == 2))}\n")
+        
 
 if __name__ == "__main__":
     main()
