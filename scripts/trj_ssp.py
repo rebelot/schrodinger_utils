@@ -43,7 +43,7 @@ def main():
     with open(args.out + '_res.dat', 'w') as fh:
         fh.write('#res,helix,strand\n')
         for res, sse in zip(rkey, ss.T):
-            fh.write(f"{res},{np.count_nonzero(sse == 1)},{np.count_nonzero(sse == 2)}\n")
+            fh.write(f"{res},{np.count_nonzero(sse == 1)/len(trj)},{np.count_nonzero(sse == 2)/len(trj)}\n")
         
 
 if __name__ == "__main__":
