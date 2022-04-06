@@ -1,16 +1,10 @@
 from schrodinger.application.desmond.packages import traj_util, topo, traj
 from schrodinger.structutils.measure import get_shortest_distance
 from itertools import product
-from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import argparse
-
-import os
-
-os.environ["SCHRODINGER_ALLOW_UNSAFE_MULTIPROCESSING"] = "1"
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -71,8 +65,7 @@ def main():
             yield P + c
 
     dist = []
-    n = len(trj)
-    for fr in tqdm(trj):
+    for fr in trj:
         g1_st.setXYZ(fr.pos(g1_gids))
 
         if args.periodic:
