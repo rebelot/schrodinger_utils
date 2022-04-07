@@ -53,38 +53,34 @@ def main():
     g2_st = cms.extract(g2_aids)
     g2_atoms = list(g2_st.atom)
 
-    i = (0, 1, -1)  # --> (0, 0, 0), (0, 0, 1) ...
-    c = (
-        np.array(list(product(i, i, i)))
-        if not args.noself
-        else np.array(list(product(i, i, i)))[1:]
-    )
+    _i = (0, 1, -1)  # --> (0, 0, 0), (0, 0, 1) ...
+    CELLS = np.fromiter(product(_i, _i, _i), dtype=int)
+    CELLS = CELLS if not args.noself else CELLS[1:]
 
-    def get_periodic_images(P, c, box):
-        for c in c * box:
-            yield P + c
+    def get_periodic_images(P, box):
+        for cell in CELLS * box:
+            yield P + cell
 
-    dist = []
+    res = []
     for fr in trj:
         g1_st.setXYZ(fr.pos(g1_gids))
 
         if args.periodic:
             dist_imgs = []
-            for g2_image in get_periodic_images(fr.pos(g2_gids), fr.box.diagonal(), c):
+            for g2_image in get_periodic_images(fr.pos(g2_gids), fr.box.diagonal()):
                 g2_st.setXYZ(g2_image)
                 dist_imgs.append(get_shortest_distance(g1_st, st2=g2_st))
-            dist.append(min(dist_imgs))
+            res.append(min(dist_imgs))
 
         else:
             g2_st.setXYZ(fr.pos(g2_gids))
-            dist.append(get_shortest_distance(g1_st, st2=g2_st))
+            res.append(get_shortest_distance(g1_st, st2=g2_st))
 
-    dist = np.array(dist)
+    res = np.array(res)
 
     out = sys.stdout if not args.o else open(args.o + ".dat", "w")
-    for d, fr in zip(dist, trj):
-        dist, a1, a2 = d
-        a1, a2 = int(a1), int(a2)
+    for (dist, a1, a2), fr in zip(res, trj):
+        a1, a2 = int(a1) - 1, int(a2) - 1
         out.write(
             f"{fr.time} {dist} {g1_atoms[a1].pdbres}{g1_atoms[a1].resnum} ({g1_atoms[a1].index}) {g2_atoms[a2].pdbres}{g2_atoms[a2].resnum} ({g2_atoms[a2].index})\n"
         )
@@ -92,7 +88,7 @@ def main():
 
     if args.p:
         o = args.o if args.o else "trj_shortes_periodic_distance"
-        plt.plot([fr.time / 1000 for fr in trj], dist[:, 0])
+        plt.plot([fr.time / 1000 for fr in trj], res[:, 0])
         plt.xlabel("time (ns)")
         plt.ylabel("distance (Å)")
         plt.savefig(o + ".png")
