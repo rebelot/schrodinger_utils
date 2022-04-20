@@ -54,7 +54,7 @@ def main():
     g2_atoms = list(g2_st.atom)
 
     _i = (0, 1, -1)  # --> (0, 0, 0), (0, 0, 1) ...
-    CELLS = np.fromiter(product(_i, _i, _i), dtype=int)
+    CELLS = np.array(list(product(_i, _i, _i)), dtype=int)
     CELLS = CELLS if not args.noself else CELLS[1:]
 
     def get_periodic_images(P, box):
