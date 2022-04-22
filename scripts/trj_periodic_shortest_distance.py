@@ -44,12 +44,12 @@ def main():
     trj = trj[slicer]
 
     g1_aids = cms.select_atom(args.g1)
-    g1_gids = topo.aids2gids(cms, g1_aids)
+    g1_gids = topo.aids2gids(cms, g1_aids, include_pseudoatoms=False)
     g1_st = cms.extract(g1_aids)
     g1_atoms = list(g1_st.atom)
 
     g2_aids = cms.select_atom(args.g2)
-    g2_gids = topo.aids2gids(cms, g2_aids)
+    g2_gids = topo.aids2gids(cms, g2_aids, include_pseudoatoms=False)
     g2_st = cms.extract(g2_aids)
     g2_atoms = list(g2_st.atom)
 
