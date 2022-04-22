@@ -53,6 +53,10 @@ def main():
     g2_st = cms.extract(g2_aids)
     g2_atoms = list(g2_st.atom)
 
+    if not (len(g1_atoms) and len(g2_atoms)):
+        raise ValueError(f"No atoms selected: g1 = {len(g1_atoms)}, g2 = {len(g2_atoms)}")
+            
+
     _i = (0, 1, -1)  # --> (0, 0, 0), (0, 0, 1) ...
     CELLS = np.array(list(product(_i, _i, _i)), dtype=int)
     CELLS = CELLS if not args.noself else CELLS[1:]
