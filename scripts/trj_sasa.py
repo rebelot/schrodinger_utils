@@ -1,14 +1,11 @@
 import argparse
 import os
 
-os.environ["SCHRODINGER_ALLOW_UNSAFE_MULTIPROCESSING"] = "1"  # FUCK OFF
-
 import matplotlib.pyplot as plt
 import numpy as np
 from schrodinger import structure
 from schrodinger.application.desmond.packages import analysis, topo, traj, traj_util
 from schrodinger.structutils import analyze
-from tqdm import tqdm
 
 # TODO: refactor using analyzers!
 
@@ -25,15 +22,14 @@ def main():
 
     parser.add_argument("cms", help="input cms file")
     parser.add_argument(
-        "asl",
-        help="ASL specifying `atoms` for SASA calculations; default 'protein'",
-        default="protein",
+        "out",
+        help="output filename. extensions are added automatically, default = sasa",
     )
     parser.add_argument("-t", help="trajectory")
     parser.add_argument(
-        "-o",
-        help="output filename. extensions are added automatically, default = sasa",
-        default="sasa",
+        "-asl",
+        help="ASL specifying `atoms` for SASA calculations; default 'protein'",
+        default="protein",
     )
     parser.add_argument(
         "-s", help='slice trj START:END:STEP (e.g.: "::10" will pick every 10th frame)'
