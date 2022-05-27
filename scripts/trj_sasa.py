@@ -19,7 +19,6 @@ def main():
             sasa_byres.dat: matrix of shape (times, residues)
             """
     )
-
     parser.add_argument("cms", help="input cms file")
     parser.add_argument(
         "out",
@@ -69,7 +68,7 @@ def main():
     slicer = (
         slice(*[int(x) if x else None for x in args.s.split(":")])
         if args.s
-        else slice(None,None)
+        else slice(None, None)
     )
 
     trj = trj[slicer]  # type: ignore
