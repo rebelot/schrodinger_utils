@@ -75,7 +75,7 @@ class InteractionOutput:
                     bonddict.setdefault(key, [])
                     bonddict[key].append(f)
         if self.btype == "all":
-           return { k: sorted(list(set(v))) for k, v in bonddict } 
+           return { k: sorted(list(set(v))) for k, v in bonddict.items() } 
         return bonddict
 
     def existence_map(self, bonddict):
@@ -217,34 +217,42 @@ def main():
     aids2 = cms.select_atom(asl2)
 
     analyzers = []
-    btype = []
+    btypes = []
     for a in args.b.split(","):
         if a == "hb":
             analyzers.append(
                 analysis.HydrogenBondFinder(msys, cms, aids1=aids1, aids2=aids2)
             )
-            btype.append("HB")
+            btypes.append("HB")
         elif a == "sb":
             analyzers.append(
                 analysis.SaltBridgeFinder(msys, cms, aids1=aids1, aids2=aids2)
             )
-            btype.append("SB")
+            btypes.append("SB")
         elif a == "pipi":
             analyzers.append(analysis.PiPiFinder(msys, cms, aids1=aids1, aids2=aids2))
-            btype.append("PiPi")
+            btypes.append("PiPi")
         elif a == "catpi":
             analyzers.append(analysis.CatPiFinder(msys, cms, aids1=aids1, aids2=aids2))
-            btype.append("CatPi")
+            btypes.append("CatPi")
         elif a == "hpho":
             analyzers.append(
                 analysis.HydrophobicInter(msys, cms, prot_asl=asl1, lig_asl=asl2)
             )
-            btype.append("HPho")
+            btypes.append("HPho")
 
     out = analysis.analyze(trj, *analyzers)
 
-    out.append(chain(*out))
-    btype.append("all")
+    if len(btypes) > 1:
+        all = []
+        for frames in zip(*out):
+            cumul = []
+            for frame in frames:
+                cumul.extend(frame)
+            all.append(cumul)
+
+        btypes.append("all")
+        out.append(all)
 
     if args.rkey:
         rkeys = [
@@ -260,7 +268,7 @@ def main():
     if args.r:
         rkeys = [0, 3, 0, 3]
 
-    for data, btype in zip(out, btype):
+    for data, btype in zip(out, btypes):
         InterOut = InteractionOutput(data, btype, cms)
         bonddict = InterOut.bonddict(aids1, *rkeys)
         em, keys = InterOut.existence_map(bonddict)
