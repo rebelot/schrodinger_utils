@@ -24,6 +24,7 @@ def parse_args():
     parser.add_argument("cfg", help="simulation -out.cfg")
     parser.add_argument("out", help="output file(s) basename")
     parser.add_argument("-t", help="trajectory dir")
+    parser.add_argument("-p", help="plot data")
     parser.add_argument("-s", help="slice trajectory START:END:STEP")
     parser.add_argument(
         "-e",
@@ -143,11 +144,13 @@ def main():
             fh.write("# " + " ".join(ana._attr) + "\n")
             fh.write("\n".join(" ".join(str(v) for v in r) for r in res))
 
-        plt.plot([fr.time / 1000 for fr in trj], res.sum(axis=1))
-        plt.xlabel("time (ns)")
-        plt.ylabel(r"Energy ($kcal\ mol^\{{-1}}$")
-    plt.legend(names)
-    plt.savefig(args.out + ".png")
+        if args.p:
+            plt.plot([fr.time / 1000 for fr in trj], res.sum(axis=1))
+            plt.xlabel("time (ns)")
+            plt.ylabel(r"Energy ($kcal\ mol^\{{-1}}$")
+    if args.p:
+        plt.legend(names)
+        plt.savefig(args.out + ".png")
 
 
 if __name__ == "__main__":
