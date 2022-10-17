@@ -130,3 +130,10 @@ def parse_residue_interaction_energies_and_color_residues(filename, cmap="Greens
     indices = ie.header2indices()
     data = merge_res(inter, indices)
     color_atoms(data, cmap)
+
+
+# def per_res_mmgbsa(st):
+#     m = []
+#     for res in st.residue:
+#         m.append(np.mean([a.property['r_psp_MMGBSA_dG_Bind'] for a in res.atom]))
+#     return m 
