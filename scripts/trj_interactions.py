@@ -2,6 +2,10 @@ import argparse
 import sys
 from itertools import chain
 
+import matplotlib
+from PyQt6 import QtCore
+
+matplotlib.use("qtagg")
 import matplotlib.pyplot as plt
 import numpy as np
 from schrodinger.application.desmond.packages import analysis, topo, traj, traj_util
@@ -75,7 +79,7 @@ class InteractionOutput:
                     bonddict.setdefault(key, [])
                     bonddict[key].append(f)
         if self.btype == "all":
-           return { k: sorted(list(set(v))) for k, v in bonddict.items() } 
+            return {k: sorted(list(set(v))) for k, v in bonddict.items()}
         return bonddict
 
     def existence_map(self, bonddict):
@@ -91,6 +95,7 @@ class InteractionOutput:
 
     def count_bonds(self):
         return [len(b) for b in self.data]
+
 
 def plot_em(ax, em, keys, btype, times):
     ax.imshow(em, aspect="auto")
@@ -237,7 +242,7 @@ def main():
             btypes.append("CatPi")
         elif a == "hpho":
             analyzers.append(
-                analysis.HydrophobicInter(msys, cms, prot_asl=asl1, lig_asl=asl2)
+                analysis.HydrophobicInterFinder(msys, cms, aids1=aids1, aids2=aids2)
             )
             btypes.append("HPho")
 
@@ -296,8 +301,6 @@ def main():
             fig, ax = plt.subplots(1)
             plot_allbonds(ax, allbonds, btype, times)
             fig.savefig(args.out + f"_{btype}-ab.png")
-
-
 
 
 if __name__ == "__main__":

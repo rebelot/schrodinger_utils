@@ -78,12 +78,12 @@ def color_atoms(data: dict, cmap):
     return ws
 
 
-def parse_residue_interactions_and_color_residues(*filenames, cmap="Greens"):
+def parse_residue_interactions_and_color_residues(*filenames, cmap="Greens", thresh=0.3, color='red'):
     inter = Interactions.read(*filenames)
     data = inter.split_labels_and_merge()
     interdict = inter.get_inter_dict()
     color_atoms(data, cmap)
-    linegrp = make_interaction_lines(interdict)
+    linegrp = make_interaction_lines(interdict, thresh=thresh, color=color)
     return inter, linegrp
 
 
@@ -97,12 +97,12 @@ def atoms2pos(atoms):
 
 
 def write_interdict(filename, interdict):
-    with open(filename) as f:
+    with open(filename, 'w') as f:
         for k, v in interdict.items():
-            f.write(k + " " + v + "\n")
+            f.write(k + "," + str(v) + "\n")
 
 
-def make_interaction_lines(interdict):
+def make_interaction_lines(interdict, thresh=0.3, color='red'):
     from schrodinger import maestro
     ws = maestro.workspace_get()
     linegrp = common.Group()
@@ -115,6 +115,7 @@ def make_interaction_lines(interdict):
         res_2 = maestro.analyze.get_atoms_from_asl(ws, key2asl(key2))
         segment = [atoms2pos(res_1), atoms2pos(res_2)]
         # segments.append(segment)
-        w = 10 * (val - wmin) / (wmax - wmin) + 0.01
-        linegrp.add(lines.MaestroLines([segment], color="red", width=w))
+        if val >= thresh:
+            w = 10 * (val - wmin) / (wmax - wmin) + 0.01
+            linegrp.add(lines.MaestroLines([segment], color=color, width=w))
     return linegrp

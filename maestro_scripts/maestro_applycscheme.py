@@ -3,38 +3,57 @@ __doc__ = """
 Map data to atom colors
 
 """
-#Name: Data to atom color
-#Command: pythonrun maestro_applycscheme map2color
+# Name: Data to atom color
+# Command: pythonrun maestro_applycscheme map2color
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
-from matplotlib.gridspec import GridSpec
 from schrodinger import maestro
 from schrodinger.Qt.PyQt5.QtCore import pyqtSlot
-from schrodinger.Qt.PyQt5.QtWidgets import (QCheckBox, QGridLayout, QGroupBox,
-                                            QHBoxLayout, QLabel, QLineEdit,
-                                            QMainWindow, QPushButton,
-                                            QRadioButton, QVBoxLayout, QWidget)
-from schrodinger.structutils import analyze, measure
+from schrodinger.Qt.PyQt5.QtWidgets import (
+    QCheckBox,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QPushButton,
+    QRadioButton,
+    QVBoxLayout,
+    QWidget,
+)
+from schrodinger.structutils import analyze
 
-def map2color(st, data, cmap):
+def from_file(datafile):
+    data = []
+    chainresnum = []
+    with open(datafile, "r") as f:
+        lines = f.readlines()
+    for line in lines:
+        chain, resnum, val = line.split()
+        data.append(float(val))
+        chainresnum.append((chain, resnum))
+
+    return data, chainresnum
+
+def map2color(st, data, chainresnum, cmap):
     """
-    Filter data through a normalized ScalarMappable and map values to atom colors
-    data are assumed to map to individual structure residues:
-    make sure that the order of `data` and `st.residue` is consistent
-
     :st: maestro.Structure
     :data: 1D np.array of length st.residue
     :cmap: string (available matplotlib colormaps)
     """
+
+    data = np.array(data)
     vmin = data.min()
     vmax = data.max()
     norm = Normalize(vmin=vmin, vmax=vmax)
     sm = ScalarMappable(norm, cmap)
-    for res, col in zip(st.residue, sm.to_rgba(data)):
-        col = [int(255*c) for c in col[:4]]
-        command = f"coloratomrgb red={col[0]} green={col[1]} blue={col[2]} a.n {','.join(str(i) for i in res.getAtomIndices())}"
-        maestro.command(command)
-    maestro.redraw_request()
+    for res, val in zip(chainresnum, data):
+        c_alpha = list(analyze.get_atoms_from_asl(st, f'c.n {res[0]} and r.n {res[1]} and a.pt CA'))
+        c_alpha = c_alpha[0] if c_alpha else None
+        if c_alpha is not None:
+            c_alpha.color = [int(255 * c) for c in sm.to_rgba(val)[:-1]]
+    return st
