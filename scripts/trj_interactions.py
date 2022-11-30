@@ -248,6 +248,9 @@ def main():
 
     out = analysis.analyze(trj, *analyzers)
 
+    if len(btypes) == 1:
+        out = [out]
+
     if len(btypes) > 1:
         all = []
         for frames in zip(*out):
