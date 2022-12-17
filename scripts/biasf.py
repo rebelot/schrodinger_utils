@@ -18,7 +18,7 @@ def main():
         choices=["kcal", "kj"],
         default="kcal",
         metavar="kTemp",
-        type=float,
+        type=str,
     )
     args = parser.parse_args()
 
