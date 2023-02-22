@@ -18,6 +18,7 @@ TITLE = {
     "PiPi": "Pi-Pi interactions",
     "CatPi": "Pi-Cation interactions",
     "HPho": "Hydrophobic interactions",
+    "WB": "Water Bridges",
     "all": "All interactions",
 }
 
@@ -190,7 +191,7 @@ def main():
     parser.add_argument(
         "-b",
         help="comma-separated list of interaction types to compute:\
-            default is hb,sb,pipi,catpi [optional: hpho]",
+            default is hb,sb,pipi,catpi [optional: hpho, wb]",
         default="hb,sb,pipi,catpi",
     )
     parser.add_argument(
@@ -245,6 +246,9 @@ def main():
                 analysis.HydrophobicInterFinder(msys, cms, aids1=aids1, aids2=aids2)
             )
             btypes.append("HPho")
+        elif a == "wb":
+            analyzers.append(analysis.WaterBridges(msys, cms, aids1, aids2))
+            btypes.append("WB")
 
     out = analysis.analyze(trj, *analyzers)
 
