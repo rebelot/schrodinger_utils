@@ -247,7 +247,7 @@ def main():
             )
             btypes.append("HPho")
         elif a == "wb":
-            analyzers.append(analysis.WaterBridges(msys, cms, aids1, aids2))
+            analyzers.append(analysis.WaterBridges(msys, cms, asl1, asl2))
             btypes.append("WB")
 
     out = analysis.analyze(trj, *analyzers)
