@@ -41,16 +41,20 @@ class InteractionOutput:
         pdata = []
         for frame in data:
             pbond = []
-            for bond in frame:
-                if isinstance(bond, analysis.CatPiInteraction):
-                    x = bond.ring[0]
-                    y = bond.cations[0]
-                elif isinstance(bond, analysis.PiPiInteraction):
-                    x = bond.ring1[0]
-                    y = bond.ring2[0]
-                else:
-                    x, y = bond
-                pbond.append([x, y])
+            if isinstance(frame, dict):
+                for bond in frame['WaterBridgeResult']:
+                    pbond.append([bond.prot_aid, bond.lig_aid])
+            else:
+                for bond in frame:
+                    if isinstance(bond, analysis.CatPiInteraction):
+                        x = bond.ring[0]
+                        y = bond.cations[0]
+                    elif isinstance(bond, analysis.PiPiInteraction):
+                        x = bond.ring1[0]
+                        y = bond.ring2[0]
+                    else:
+                        x, y = bond
+                    pbond.append([x, y])
             pdata.append(pbond)
         return pdata
 
