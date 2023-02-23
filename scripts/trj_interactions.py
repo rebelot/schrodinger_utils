@@ -23,6 +23,67 @@ TITLE = {
 }
 
 
+class Results:
+    def __init__(self, data):
+        self.data = data
+
+    def preproc(self):
+        return self.data
+
+    @classmethod
+    def select(cls, btype):
+        if btype == "HB":
+            return Results
+        elif btype == "SB":
+            return Results
+        elif btype == "PiPi":
+            return PiCatPiResults
+        elif btype == "CatPi":
+            return PiCatPiResults
+        elif btype == "HPho":
+            return Results
+        elif btype == "WB":
+            return WaterBridgeResults
+        else:
+            raise ValueError(f"Unknown interaction type: {btype}")
+
+
+class PiCatPiResults(Results):
+    def __init__(self, data):
+        super().__init__(data)
+
+    def preproc(self):
+        pdata = []
+        for frame in self.data:
+            pbond = []
+            for bond in frame:
+                if isinstance(bond, analysis.CatPiInteraction):
+                    x = bond.ring[0]
+                    y = bond.cations[0]
+                elif isinstance(bond, analysis.PiPiInteraction):
+                    x = bond.ring1[0]
+                    y = bond.ring2[0]
+                else:
+                    x, y = bond
+                pbond.append([x, y])
+            pdata.append(pbond)
+        return pdata
+
+
+class WaterBridgeResults(Results):
+    def __init__(self, data):
+        super().__init__(data)
+
+    def preproc(self):
+        pdata = []
+        for frame in self.data:
+            pbond = []
+            for bond in frame:
+                pbond.append([bond.prot_aid, bond.lig_aid])
+            pdata.append(pbond)
+        return pdata
+
+
 class InteractionOutput:
     """
     IO = InteractionOutput(data, cms)
@@ -32,31 +93,10 @@ class InteractionOutput:
     """
 
     def __init__(self, data, btype, cms):
-        self.data = self._preproc(data)
+        self.data = data
         self.cms = cms
         self.btype = btype
         self.atoms = list(cms.atom)
-
-    def _preproc(self, data):
-        pdata = []
-        for frame in data:
-            pbond = []
-            if isinstance(frame, dict):
-                for bond in frame['WaterBridgeResult']:
-                    pbond.append([bond.prot_aid, bond.lig_aid])
-            else:
-                for bond in frame:
-                    if isinstance(bond, analysis.CatPiInteraction):
-                        x = bond.ring[0]
-                        y = bond.cations[0]
-                    elif isinstance(bond, analysis.PiPiInteraction):
-                        x = bond.ring1[0]
-                        y = bond.ring2[0]
-                    else:
-                        x, y = bond
-                    pbond.append([x, y])
-            pdata.append(pbond)
-        return pdata
 
     def aid2key(self, aid, start, stop):
         """
@@ -259,6 +299,8 @@ def main():
     if len(btypes) == 1:
         out = [out]
 
+    out = [Results.select(btype)(res).preproc() for btype, res in zip(btypes, out)]
+
     if len(btypes) > 1:
         all = []
         for frames in zip(*out):
@@ -304,7 +346,6 @@ def main():
         write_allbonds(f_allbonds, allbonds, times)
 
         if keys and args.plot:
-
             fig, ax = plt.subplots(1, figsize=(10, 0.1 * len(keys) + 1))
             plot_em(ax, em, keys, btype, times)
             plt.tight_layout()
