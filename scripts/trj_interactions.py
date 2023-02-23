@@ -78,7 +78,7 @@ class WaterBridgeResults(Results):
         pdata = []
         for frame in self.data:
             pbond = []
-            for bond in frame:
+            for bond in frame['WaterBridgeResult']:
                 pbond.append([bond.prot_aid, bond.lig_aid])
             pdata.append(pbond)
         return pdata
