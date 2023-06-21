@@ -1,7 +1,6 @@
 import matplotlib
-from PyQt6 import QtCore
 
-matplotlib.use("qtagg")
+matplotlib.use("Agg")
 import argparse
 import pickle
 import sys

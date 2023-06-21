@@ -1,6 +1,5 @@
-from PyQt6 import QtCore
 import matplotlib
-matplotlib.use('qtagg')
+matplotlib.use('Agg')
 
 import argparse
 import numpy as np

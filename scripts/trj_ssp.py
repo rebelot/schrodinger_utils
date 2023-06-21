@@ -4,7 +4,7 @@ import sys
 import matplotlib
 from PyQt6 import QtCore
 
-matplotlib.use("qtagg")
+matplotlib.use("agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from schrodinger.application.desmond.packages import analysis, topo, traj_util

@@ -2,6 +2,8 @@ import argparse
 import sys
 import pickle
 
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from schrodinger.application.desmond.packages import analysis, topo, traj, traj_util

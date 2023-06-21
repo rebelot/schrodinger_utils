@@ -3,9 +3,8 @@ import sys
 from itertools import chain
 
 import matplotlib
-from PyQt6 import QtCore
+matplotlib.use("Agg")
 
-matplotlib.use("qtagg")
 import matplotlib.pyplot as plt
 import numpy as np
 from schrodinger.application.desmond.packages import analysis, topo, traj, traj_util
