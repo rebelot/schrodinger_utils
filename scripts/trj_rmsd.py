@@ -33,7 +33,7 @@ def main():
     parser.add_argument(
         "-ref",
         help="Reference frame (default 0) OR structure filename",
-        default=0,
+        default="0",
         type=str,
     )
     parser.add_argument("-o", help="Output filename, defaults to stdout.")
