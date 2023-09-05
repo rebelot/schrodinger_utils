@@ -66,8 +66,8 @@ def main():
 
     if args.ref.isdigit():
         ref = int(args.ref)
-        fit_ref_pos = trj[ref].pos(fit_gids)
         rmsd_ref_pos = trj[ref].pos(rmsd_gids)
+        fit_ref_pos = trj[ref].pos(fit_gids)
     else:
         ref_st = StructureReader.read(args.ref)
         rmsd_ref_pos = np.array([ref_st.atom[i].xyz for i in analysis.evaluate_asl(ref_st, rmsd_asl)])
