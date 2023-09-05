@@ -5,6 +5,7 @@ import matplotlib
 matplotlib.use("Agg")
 from schrodinger.application.desmond.packages import traj_util, topo, traj, analysis
 from schrodinger.structutils import analyze
+from schrodinger.structure import StructureReader
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
@@ -31,9 +32,9 @@ def main():
     )
     parser.add_argument(
         "-ref",
-        help="Reference frame (default 0) OR structure filename (not implemented yet)",
+        help="Reference frame (default 0) OR structure filename",
         default=0,
-        type=int,
+        type=str,
     )
     parser.add_argument("-o", help="Output filename, defaults to stdout.")
     parser.add_argument("-p", help="Plot results", action="store_true")
@@ -58,12 +59,19 @@ def main():
     rmsd_aids = cms.select_atom(rmsd_asl)
     rmsd_Atoms = list(analyze.get_atoms_from_asl(cms, rmsd_asl))
     rmsd_gids = topo.aids2gids(cms, rmsd_aids, include_pseudoatoms=False)
-    rmsd_ref_pos = trj[args.ref].pos(rmsd_gids)
 
     fit_asl = args.fit or rmsd_asl
     fit_aids = cms.select_atom(fit_asl)
     fit_gids = topo.aids2gids(cms, fit_aids, include_pseudoatoms=False)
-    fit_ref_pos = trj[int(args.ref)].pos(fit_gids)
+
+    if args.ref.isdigit():
+        ref = int(args.ref)
+        fit_ref_pos = trj[ref].pos(fit_gids)
+        rmsd_ref_pos = trj[ref].pos(rmsd_gids)
+    else:
+        ref_st = StructureReader.read(args.ref)
+        rmsd_ref_pos = np.array([ref_st.atom[i].xyz for i in analysis.evaluate_asl(ref_st, rmsd_asl)])
+        fit_ref_pos = np.array([ref_st.atom[i].xyz for i in analysis.evaluate_asl(ref_st, fit_asl)])
 
     mode = args.mode.lower()
     if mode == "rmsd":
