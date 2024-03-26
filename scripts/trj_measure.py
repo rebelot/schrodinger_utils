@@ -16,18 +16,19 @@ the CenterOfMass of the selection is used; distance -> 2 tokens, angle -> 3 toke
 MODE = distance, angle, dihedral or xyz (only output positons); 
 Multiple expressions can be provided and will be executed sequentially from left to right.
 e.g: -e "a.n 10:a.n 20-25:distance" will compute the distance between atoms 10 and the center of mass of atoms 20-25.""")
-    parser.add_argument( "-pp",
-        help='''Write the body of custom python function to be called upon the Nth expression results (usually those where MODE=xyz)
-        in the form "N@body". The function scope exposes the variables: :pos: (N_tokens x N_frames x 3) numpy array; :fr: the frame object''', default=None)
+    # parser.add_argument( "-pp",
+    #     help='''Write the body of custom python function to be called upon the Nth expression results (usually those where MODE=xyz)
+    #     in the form "N@body". The function scope exposes the variables: :pos: (N_tokens x N_frames x 3) numpy array; :fr: the frame object''', default=None)
     args = parser.parse_args()
 
     msys, cms = topo.read_cms(args.cms)
     trj: typing.List[traj.Frame] = traj.read_traj(args.trj)
-
+    mode_list = []
     analyzers = []
     for e in args.e:
         e = e.split(':')
         mode = e.pop(-1)
+        mode_list.append(mode + str(mode_list.count(mode)))
         tokens_aids = [cms.select_atom(asl) for asl in e]
         token_gids = [topo.aids2gids(cms, aids) for aids in tokens_aids]
         tokens = [analysis.Com(msys, cms, gids=gids) for gids in token_gids]
@@ -43,11 +44,28 @@ e.g: -e "a.n 10:a.n 20-25:distance" will compute the distance between atoms 10 a
             analyzers.append(*tokens)
 
     res = analysis.analyze(trj, *analyzers)
+    
+    res_ = []
+    mode_list_ = []
+    for r, m in zip(res, mode_list):
+        if m == 'xyz':
+            for x, xm in zip(np.array(r).T, 'xyz'):
+                res_.append(x)
+                mode_list_.append(m + '_' + xm)
+        else:
+            res_.append(r)
+            mode_list_.append(m)
 
-    for pp in args.pp:
-        pass
+    res_ = np.array(res_)
+    
+    with open(args.out, 'w') as f:
+        f.write(','.join(mode_list) + '\n')
+        np.savetxt(f, res, delimiter=',')
+
+    # for pp in args.pp:
+    #     pass
 
 
 if __name__ == "__main__":
-    print('Not implemented yet. Goodbye!')
-    # main()
+    # print('Not implemented yet. Goodbye!')
+    main()
