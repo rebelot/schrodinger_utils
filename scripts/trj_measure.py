@@ -7,8 +7,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument
     parser.add_argument("cms", help="Input cms file")
-    parser.add_argument("trj", help="Input trajectory dir")
     parser.add_argument("out", help="output basename")
+    parser.add_argument("-trj", help="Input trajectory dir")
     parser.add_argument( "-e", action="append",
             help="""Expression in the form of ASL_1[:ASL_N]:MODE, where:
 ASL is the ':'-separated list of asl expressions specifying the atoms to measure, if the asl expands to more than one atom,
@@ -21,8 +21,12 @@ e.g: -e "a.n 10:a.n 20-25:distance" will compute the distance between atoms 10 a
     #     in the form "N@body". The function scope exposes the variables: :pos: (N_tokens x N_frames x 3) numpy array; :fr: the frame object''', default=None)
     args = parser.parse_args()
 
-    msys, cms = topo.read_cms(args.cms)
-    trj: typing.List[traj.Frame] = traj.read_traj(args.trj)
+    if args.trj:
+        msys, cms = topo.read_cms(args.cms)
+        trj: typing.List[traj.Frame] = traj.read_traj(args.trj)
+    else:
+        msys, cms, trj = traj_util.read_cms_and_traj(args.cms)
+
     mode_list = []
     analyzers = []
     for e in args.e:
