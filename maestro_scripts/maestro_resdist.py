@@ -3,8 +3,8 @@ __doc__ = """
 Calculate per-residue distance across multiple images
 
 """
-#Name: Per-residue distance
-#Command: pythonrun maestro_resdist.App
+# Name: Per-residue distance
+# Command: pythonrun maestro_resdist.App
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,12 +12,18 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 from matplotlib.gridspec import GridSpec
 from schrodinger import maestro
-from schrodinger.Qt.PyQt5.QtCore import pyqtSlot
-from schrodinger.Qt.PyQt5.QtWidgets import (QCheckBox, QGridLayout, QGroupBox,
-                                            QHBoxLayout, QLabel, QLineEdit,
-                                            QMainWindow, QPushButton,
-                                            QRadioButton, QVBoxLayout, QWidget)
-from schrodinger.structutils import analyze, measure
+from schrodinger.Qt import PyQt6
+from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
+from schrodinger.structutils import analyze
 
 
 class App(QWidget):
@@ -29,15 +35,16 @@ class App(QWidget):
         maestro.project_update_callback_add(self.maestro_callback)
 
     def initUI(self):
-        self.asl_le = QLineEdit('protein')
-        self.asl_lb = QLabel('Selection ASL:')
+        self.asl_le = QLineEdit("protein")
+        self.asl_lb = QLabel("Selection ASL:")
         self.main_b = QPushButton("Go!")
         self.main_b.clicked.connect(self.on_clicked_main_b)
         self.avg_b = QPushButton("Create average structure")
         self.avg_b.clicked.connect(self.on_clicked_avg_b)
-        self.cmap_le = QLineEdit('summer')
-        self.cmap_lb = QLabel('colormap')
-        self.cmap_lb.setToolTip("""Possible values are:
+        self.cmap_le = QLineEdit("summer")
+        self.cmap_lb = QLabel("colormap")
+        self.cmap_lb.setToolTip(
+            """Possible values are:
                 Accent, Accent_r, Blues, Blues_r, BrBG, BrBG_r, BuGn, BuGn_r,
                 BuPu, BuPu_r, CMRmap, CMRmap_r, Dark2, Dark2_r, GnBu, GnBu_r,
                 Greens, Greens_r, Greys, Greys_r, OrRd, OrRd_r, Oranges,
@@ -62,9 +69,10 @@ class App(QWidget):
                 summer_r, tab10, tab10_r, tab20, tab20_r, tab20b, tab20b_r,
                 tab20c, tab20c_r, terrain, terrain_r, viridis, viridis_r,
                 winter, winter_r
-                """)
-        self.status = QLabel('')
-        self.samecb = QCheckBox('Structures are the same')
+                """
+        )
+        self.status = QLabel("")
+        self.samecb = QCheckBox("Structures are the same")
 
     def generateUI(self):
         # gridUI = QGridLayout()
@@ -87,7 +95,7 @@ class App(QWidget):
 
         self.setLayout(vbox)
         # self.setGeometry()
-        self.setWindowTitle('Per-residue distances')
+        self.setWindowTitle("Per-residue distances")
         self.show()
 
     def set_defaults(self):
@@ -98,8 +106,8 @@ class App(QWidget):
     def maestro_callback(self):
         pt = maestro.project_table_get()
         nsel = len(list(pt.selected_rows))
-        nsel = nsel if nsel else 'WARNING, 0 entries selected'
-        self.status.setText(f'Selected rows: {nsel}')
+        nsel = nsel if nsel else "WARNING, 0 entries selected"
+        self.status.setText(f"Selected rows: {nsel}")
 
     @pyqtSlot()
     def on_clicked_main_b(self):
@@ -195,7 +203,7 @@ def dist2_avg_ribbon(dist, asl, cmap):
     avg_st = analyze.get_average_structure(sts_e)
     avg_row = pt.importStructure(avg_st)
     avg_row.includeOnly()
-    avg_row.title = 'AVG'
+    avg_row.title = "AVG"
     pt.update()
 
     mean_dist = dist.mean(axis=0)
@@ -210,22 +218,23 @@ def make_plot(dist, cmap):
     pt = maestro.project_table_get()
 
     f = plt.figure(constrained_layout=True)
-    gs = GridSpec(2, 2, figure=f, height_ratios=[
-                  3/4, 1/4], width_ratios=[4/5, 1/5])
+    gs = GridSpec(
+        2, 2, figure=f, height_ratios=[3 / 4, 1 / 4], width_ratios=[4 / 5, 1 / 5]
+    )
     ax1 = f.add_subplot(gs[0, 0])
     ax2 = f.add_subplot(gs[1, 0], sharex=ax1)
     ax3 = f.add_subplot(gs[0, 1])
     ax3.set_aspect(20)
 
     p1 = ax1.pcolormesh(dist, cmap=cmap)
-    ax1.set_ylabel('entry_id')
+    ax1.set_ylabel("entry_id")
     plt.setp(ax1.get_xticklabels(), visible=False)
     ax1.set_yticks(range(len(pt.selected_rows)))
     ax1.set_yticklabels(row.entry_id for row in pt.selected_rows)
-    ax1.grid(b=True, axis='y')
+    ax1.grid(b=True, axis="y")
 
     plt.colorbar(p1, ax3)
-    ax3.set_ylabel('distance (Å) to average')
+    ax3.set_ylabel("distance (Å) to average")
 
     # ax2.pcolormesh(dist.mean(axis=0).reshape(1, dist.shape[1]), cmap=cmap)
     mean_dist = dist.mean(axis=0)
@@ -233,10 +242,16 @@ def make_plot(dist, cmap):
     vmax = mean_dist.max()
     norm = Normalize(vmin=vmin, vmax=vmax)
     sm = ScalarMappable(norm, cmap)
-    ax2.bar(range(dist.shape[1]), mean_dist, color=sm.to_rgba(mean_dist), align='edge', width=1)
-    ax2.set_xlabel('residue n')
+    ax2.bar(
+        range(dist.shape[1]),
+        mean_dist,
+        color=sm.to_rgba(mean_dist),
+        align="edge",
+        width=1,
+    )
+    ax2.set_xlabel("residue n")
     ax2.set_xlim([0, dist.shape[1]])
-    ax2.set_title('average')
+    ax2.set_title("average")
     ax2.set_yticks([])
     plt.show()
 
@@ -249,7 +264,9 @@ def map2ribbon(st, asl, sm, data):
     st = st.extract(analyze.evaluate_asl(st, asl))
     for res, col in zip(st.residue, sm.to_rgba(data)):
         res = f"protein and res.num {res.resnum} and chain.name {res.chain}"
-        col = [int(255*c) for c in col[:4]]
-        command = f'ribbon scheme=constant red={col[0]} green={col[1]} blue={col[2]} {res}'
+        col = [int(255 * c) for c in col[:4]]
+        command = (
+            f"ribbon scheme=constant red={col[0]} green={col[1]} blue={col[2]} {res}"
+        )
         maestro.command(command)
         maestro.redraw_request()

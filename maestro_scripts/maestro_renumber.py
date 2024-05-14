@@ -3,16 +3,21 @@ __doc__ = """
 Renumber ANY residue
 
 """
-#Name: Renumber
-#Command: pythonrun maestro_renumber.App
+# Name: Renumber
+# Command: pythonrun maestro_renumber.App
 
 from schrodinger import maestro
-from schrodinger.Qt.PyQt5.QtCore import pyqtSlot
-from schrodinger.Qt.PyQt5.QtCore import Qt
-from schrodinger.Qt.PyQt5.QtWidgets import (QCheckBox, QGridLayout, QGroupBox,
-                                            QHBoxLayout, QLabel, QLineEdit,
-                                            QMainWindow, QPushButton, QTextEdit, QListWidget, QListWidgetItem,
-                                            QRadioButton, QVBoxLayout, QWidget)
+from schrodinger.Qt import PyQt6
+from PyQt6.QtWidgets import (
+    QHBoxLayout,
+    QLineEdit,
+    QListWidget,
+    QPushButton,
+    QRadioButton,
+    QVBoxLayout,
+    QWidget,
+)
+
 
 class App(QWidget):
     def __init__(self):
@@ -45,7 +50,7 @@ class App(QWidget):
 
         self.setLayout(MainHBox)
         # self.setGeometry()
-        self.setWindowTitle('Notes')
+        self.setWindowTitle("Notes")
         self.show()
 
     def set_defaults(self):
@@ -58,12 +63,12 @@ class App(QWidget):
             resdict.setdefault(res.pdbres, 0)
             resdict[res.pdbres] += 1
         for res, count in resdict.items():
-            self.report_list.addItem(f'{res}: {count}')
+            self.report_list.addItem(f"{res}: {count}")
 
     def on_dclicked_list_item(self):
         item = self.report_list.currentItem()
         resname = item.text().split(":")[0]
-        maestro.command(f'workspaceselectionreplace r.pt {resname}')
+        maestro.command(f"workspaceselectionreplace r.pt {resname}")
 
     def on_clicked_renumber_btn(self):
         item = self.report_list.currentItem()

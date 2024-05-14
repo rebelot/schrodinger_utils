@@ -59,6 +59,7 @@ def key2asl(key):
 
 def color_atoms(data: dict, cmap):
     from schrodinger import maestro
+
     ws = maestro.workspace_get()
 
     vmin = min(data.values())
@@ -78,7 +79,9 @@ def color_atoms(data: dict, cmap):
     return ws
 
 
-def parse_residue_interactions_and_color_residues(*filenames, cmap="Greens", thresh=0.3, color='red'):
+def parse_residue_interactions_and_color_residues(
+    *filenames, cmap="Greens", thresh=0.3, color="red"
+):
     inter = Interactions.read(*filenames)
     data = inter.split_labels_and_merge()
     interdict = inter.get_inter_dict()
@@ -97,13 +100,14 @@ def atoms2pos(atoms):
 
 
 def write_interdict(filename, interdict):
-    with open(filename, 'w') as f:
+    with open(filename, "w") as f:
         for k, v in interdict.items():
             f.write(k + "," + str(v) + "\n")
 
 
-def make_interaction_lines(interdict, thresh=0.3, color='red'):
+def make_interaction_lines(interdict, thresh=0.3, color="red"):
     from schrodinger import maestro
+
     ws = maestro.workspace_get()
     linegrp = common.Group()
     wmin = min(interdict.values())

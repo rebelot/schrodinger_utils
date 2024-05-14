@@ -9,6 +9,7 @@ Select interacting residues
 from schrodinger import structutils
 from schrodinger import maestro
 from schrodinger.protein.analysis import analyze
+from schrodinger.structutils import interactions
 
 
 def get_interacting(asl_g1, asl_g2=None, structure=None):
@@ -16,19 +17,14 @@ def get_interacting(asl_g1, asl_g2=None, structure=None):
     st = maestro.workspace_get() if not structure else structure
     g1 = list(analyze.get_atoms_from_asl(st, asl_g1))
     g2 = list(analyze.get_atoms_from_asl(st, asl_g2)) if asl_g2 else asl_g2
-    # r1 = structutils.interactions.gather_rings(st, atom_subset=g1)
-    # r2 = structutils.interactions.gather_rings(
-    #     st, atom_subset=g2) if asl_g2 else asl_g2
 
-    saltbr = structutils.interactions.get_salt_bridges(
+    saltbr = interactions.get_salt_bridges(
         st, group1=g1, group2=g2)
 
     hbond = analyze.hbond.get_hydrogen_bonds(st, atoms1=g1, atoms2=g2)
 
-    # pipi = structutils.interactions.find_pi_pi_interactions(
-    #     st, rings1=r1, rings2=r2)
-    # picat = structutils.interactions.find_pi_cation_interactions(
-    #     st, rings1=r1, rings2=r2)
+    pipi = interactions.find_pi_pi_interactions(st, atoms1=g1, atoms2=g2)
+    picat = interactions.find_pi_cation_interactions(st, atoms1=g1, atoms2=g2)
 
     atoms = []
     for bond in saltbr:
@@ -39,13 +35,13 @@ def get_interacting(asl_g1, asl_g2=None, structure=None):
         atoms.append(bond[0])
         atoms.append(bond[1])
 
-    # for bond in pipi:
-    #     atoms.append(bond[0].index)
-    #     atoms.append(bond[1].index)
+    for bond in pipi:
+        atoms.append(bond[0].index)
+        atoms.append(bond[1].index)
 
-    # for bond in picat:
-    #     atoms.append(bond[0].index)
-    #     atoms.append(bond[1].index)
+    for bond in picat:
+        atoms.append(bond[0].index)
+        atoms.append(bond[1].index)
 
     in_maestro = True   # TODO: check if inside maestro
     if in_maestro and len(atoms) > 0:

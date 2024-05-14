@@ -6,26 +6,11 @@ Map data to atom colors
 # Name: Data to atom color
 # Command: pythonrun maestro_applycscheme map2color
 
-import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
-from schrodinger import maestro
-from schrodinger.Qt.PyQt5.QtCore import pyqtSlot
-from schrodinger.Qt.PyQt5.QtWidgets import (
-    QCheckBox,
-    QGridLayout,
-    QGroupBox,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QMainWindow,
-    QPushButton,
-    QRadioButton,
-    QVBoxLayout,
-    QWidget,
-)
 from schrodinger.structutils import analyze
+
 
 def from_file(datafile):
     data = []
@@ -38,6 +23,7 @@ def from_file(datafile):
         chainresnum.append((chain, resnum))
 
     return data, chainresnum
+
 
 def map2color(st, data, chainresnum, cmap):
     """
@@ -52,7 +38,9 @@ def map2color(st, data, chainresnum, cmap):
     norm = Normalize(vmin=vmin, vmax=vmax)
     sm = ScalarMappable(norm, cmap)
     for res, val in zip(chainresnum, data):
-        c_alpha = list(analyze.get_atoms_from_asl(st, f'c.n {res[0]} and r.n {res[1]} and a.pt CA'))
+        c_alpha = list(
+            analyze.get_atoms_from_asl(st, f"c.n {res[0]} and r.n {res[1]} and a.pt CA")
+        )
         c_alpha = c_alpha[0] if c_alpha else None
         if c_alpha is not None:
             c_alpha.color = [int(255 * c) for c in sm.to_rgba(val)[:-1]]

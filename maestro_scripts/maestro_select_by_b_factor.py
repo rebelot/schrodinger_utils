@@ -5,13 +5,15 @@ Either return a list of residues which B-factor is above cutoff (cutoff),
 or a number residues with the highest B-factor (highest).
 
 """
-#Name: B-Select
-#Command: pythonrun maestro_select_by_b_factor.main
+# Name: B-Select
+# Command: pythonrun maestro_select_by_b_factor.main
 
+import numpy as np
 from schrodinger import get_maestro
 from schrodinger.structutils import analyze
-import numpy as np
+
 maestro = get_maestro()
+
 
 def select(asl, cutoff=40, highest=False):
     cutoff = float(cutoff)
@@ -24,12 +26,13 @@ def select(asl, cutoff=40, highest=False):
     res = residues[B >= cutoff] if not highest else residues[np.argsort(B)[-highest:]]
 
     if len(res) > 0:
-        maestro.command('workspaceselectionreplace ' + ' OR '.join(r.getAsl() for r in res))
+        maestro.command(
+            "workspaceselectionreplace " + " OR ".join(r.getAsl() for r in res)
+        )
     else:
-        maestro.warning('Empty selection. Atoms are cool.')
+        maestro.warning("Empty selection. Atoms are cool.")
 
     return res
-
 
 
 def main():
@@ -38,8 +41,9 @@ def main():
         select(selected_atoms)
     else:
         maestro.warning(
-            'Select something or use: "maestro_select_by_b_factor.select asl cutoff highest" in the command line.')
+            'Select something or use: "maestro_select_by_b_factor.select asl cutoff highest" in the command line.'
+        )
+
 
 if __name__ == "__main__":
     main()
-

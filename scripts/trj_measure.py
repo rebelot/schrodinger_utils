@@ -23,7 +23,7 @@ e.g: -e "a.n 10:a.n 20-25:distance" will compute the distance between atoms 10 a
 
     if args.trj:
         msys, cms = topo.read_cms(args.cms)
-        trj: typing.List[traj.Frame] = traj.read_traj(args.trj)
+        trj = traj.read_traj(args.trj)
     else:
         msys, cms, trj = traj_util.read_cms_and_traj(args.cms)
 

@@ -3,17 +3,22 @@ __doc__ = """
 Write awesome notes associated to entries
 
 """
-#Name: Notes
-#Command: pythonrun maestro_notes.App
+# Name: Notes
+# Command: pythonrun maestro_notes.App
 
-import os
 from schrodinger import maestro
-from schrodinger.Qt.PyQt5.QtCore import pyqtSlot
-from schrodinger.Qt.PyQt5.QtCore import Qt
-from schrodinger.Qt.PyQt5.QtWidgets import (QCheckBox, QGridLayout, QGroupBox,
-                                            QHBoxLayout, QLabel, QLineEdit,
-                                            QMainWindow, QPushButton, QTextEdit, QListWidget, QListWidgetItem,
-                                            QRadioButton, QVBoxLayout, QWidget)
+from schrodinger.Qt import PyQt6
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class App(QWidget):
@@ -30,18 +35,17 @@ class App(QWidget):
         self.entrylist.itemDoubleClicked.connect(self.on_dclicked_list_item)
         self.entrylist.itemClicked.connect(self.on_clicked_list_item)
         self.entrylist.itemSelectionChanged.connect(self.on_selected_list_items)
-        self.save_button = QPushButton('Save')
+        self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.on_clicked_save_note_button)
-        self.list_label = QLabel('Notes:')
-
+        self.list_label = QLabel("Notes:")
 
     def generateUI(self):
         MainHBox = QHBoxLayout()
-        
+
         ListVBox = QVBoxLayout()
         ListVBox.addWidget(self.list_label)
         ListVBox.addWidget(self.entrylist)
-        
+
         NoteVBox = QVBoxLayout()
         NoteVBox.addWidget(self.editor)
         NoteVBox.addWidget(self.save_button)
@@ -51,7 +55,7 @@ class App(QWidget):
 
         self.setLayout(MainHBox)
         # self.setGeometry()
-        self.setWindowTitle('Notes')
+        self.setWindowTitle("Notes")
         self.show()
 
     def set_defaults(self):
@@ -61,14 +65,16 @@ class App(QWidget):
 
     def maestro_callback(self):
         pass
-    
+
     def make_list_items(self):
         self.entrylist.clear()
         for row in self.pt.all_rows:
             try:
-                if len(row.property['s_user_notes']) > 0:
+                if len(row.property["s_user_notes"]) > 0:
                     pt_row_list_item = QListWidgetItem()
-                    pt_row_list_item.setText(f"({row.property['s_m_entry_id']}) {row.property['s_m_title']}")
+                    pt_row_list_item.setText(
+                        f"({row.property['s_m_entry_id']}) {row.property['s_m_title']}"
+                    )
                     pt_row_list_item.setData(Qt.UserRole, row)
                     self.entrylist.addItem(pt_row_list_item)
             except KeyError:
@@ -78,14 +84,14 @@ class App(QWidget):
         item = self.entrylist.currentItem()
         row = item.data(Qt.UserRole)
         self.pt.selectRows(entry_ids=[row.entry_id])
-        note = row.property['s_user_notes']
+        note = row.property["s_user_notes"]
         self.editor.setText(note)
 
     def on_clicked_list_item(self):
         item = self.entrylist.currentItem()
         row = item.data(Qt.UserRole)
         # self.pt.selectRows(entry_ids=[row.entry_id])
-        note = row.property['s_user_notes']
+        note = row.property["s_user_notes"]
         self.editor.setText(note)
 
     def on_selected_list_items(self):
@@ -94,9 +100,8 @@ class App(QWidget):
     def on_clicked_save_note_button(self):
         for row in self.pt.selected_rows:
             try:
-                row.property['s_user_notes'] = self.editor.toPlainText()
+                row.property["s_user_notes"] = self.editor.toPlainText()
             except KeyError:
-                row.property.setdefault('s_user_notes', self.editor.toPlainText())
+                row.property.setdefault("s_user_notes", self.editor.toPlainText())
         self.pt.update()
         self.make_list_items()
-

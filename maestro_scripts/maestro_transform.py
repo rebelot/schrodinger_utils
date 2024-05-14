@@ -3,17 +3,26 @@ __doc__ = """
 Rotate along specified axis
 
 """
-#Name: Transform
-#Command: pythonrun maestro_transform.App
+# Name: Transform
+# Command: pythonrun maestro_transform.App
 
 import numpy as np
 from schrodinger import maestro
-from schrodinger.Qt.PyQt5.QtWidgets import (QWidget, QGroupBox,
-                                            QCheckBox, QRadioButton,
-                                            QGridLayout, QLabel, QPushButton,
-                                            QLineEdit, QHBoxLayout,
-                                            QVBoxLayout)
-from schrodinger.Qt.PyQt5.QtCore import pyqtSlot
+from schrodinger.Qt import PyQt6
+from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QRadioButton,
+    QVBoxLayout,
+    QWidget,
+)
+
 
 class App(QWidget):
     def __init__(self):
@@ -81,15 +90,15 @@ class App(QWidget):
         self.bundo.setToolTip("wtf?!")
         self.bundo.clicked.connect(lambda: maestro.command("undo "))
 
-        self.tbutton = QPushButton('Transform', self)
+        self.tbutton = QPushButton("Transform", self)
         self.tbutton.clicked.connect(self.on_click_tbutton)
 
-        self.bdraw = QPushButton('Draw Axes')
-        self.bdel = QPushButton('Delete')
+        self.bdraw = QPushButton("Draw Axes")
+        self.bdel = QPushButton("Delete")
         self.bdraw.clicked.connect(self.on_clicked_bdraw)
         self.bdel.clicked.connect(self.on_clicked_bdel)
 
-        self.bset = QPushButton('Set')
+        self.bset = QPushButton("Set")
         self.bset.clicked.connect(self.on_clicked_bset)
 
     def axis_groupUI(self):
@@ -214,7 +223,7 @@ class App(QWidget):
         self.setLayout(gridUI)
 
         self.setGeometry(300, 300, 400, 150)
-        self.setWindowTitle('Transform')
+        self.setWindowTitle("Transform")
         self.show()
 
     def set_defaults(self):
@@ -230,19 +239,37 @@ class App(QWidget):
         y = float(self.yle.text()) if self.yle.text() else 0
         z = float(self.zle.text()) if self.zle.text() else 0
         w = float(self.cax_val_le.text()) if self.cax_val_le.text() else 0
-        aasl = self.aale.text() if self.aale.text() else 'all'
+        aasl = self.aale.text() if self.aale.text() else "all"
         rasl = self.rale.text() if self.rale.text() else aasl
         oasl = self.oale.text() if self.oale.text() else rasl
-        fasl = self.cax_le1.text() if self.cax_cb.isChecked() else ''
-        tasl = self.cax_le2.text() if self.cax_cb.isChecked() else ''
+        fasl = self.cax_le1.text() if self.cax_cb.isChecked() else ""
+        tasl = self.cax_le2.text() if self.cax_cb.isChecked() else ""
         abso = self.abs_cb.isChecked()
         if self.translate_rb.isChecked():
-            translate(x, y, z, w, atoms_asl=aasl, origin_asl=oasl,
-                      reference_asl=rasl, absolute=abso,
-                      from_asl=fasl, to_asl=tasl)
+            translate(
+                x,
+                y,
+                z,
+                w,
+                atoms_asl=aasl,
+                origin_asl=oasl,
+                reference_asl=rasl,
+                absolute=abso,
+                from_asl=fasl,
+                to_asl=tasl,
+            )
         if self.rotate_rb.isChecked():
-            rotate(x, y, z, w, atoms_asl=aasl, reference_asl=rasl,
-                   absolute=abso, from_asl=fasl, to_asl=tasl)
+            rotate(
+                x,
+                y,
+                z,
+                w,
+                atoms_asl=aasl,
+                reference_asl=rasl,
+                absolute=abso,
+                from_asl=fasl,
+                to_asl=tasl,
+            )
 
     @pyqtSlot()
     def on_toggled_self_cb(self):
@@ -374,14 +401,13 @@ class App(QWidget):
             self.zle.setText("0")
 
 
-class xyzGraphicalObj():
+class xyzGraphicalObj:
     def __init__(self):
-        self.handle = ''
+        self.handle = ""
         self.isShown = False
 
     def draw(self, x, y, z):
-        self.handle = maestro.create_model_xyz_axes(
-            x, y, z, 100, 100, 100, 1, 0, 0)
+        self.handle = maestro.create_model_xyz_axes(x, y, z, 100, 100, 100, 1, 0, 0)
         self.isShown = True
 
     def cancel(self):
@@ -389,7 +415,18 @@ class xyzGraphicalObj():
         self.isShown = False
 
 
-def translate(x, y, z, w=0, atoms_asl='all', reference_asl='', origin_asl='', absolute=False, to_asl='', from_asl=''):
+def translate(
+    x,
+    y,
+    z,
+    w=0,
+    atoms_asl="all",
+    reference_asl="",
+    origin_asl="",
+    absolute=False,
+    to_asl="",
+    from_asl="",
+):
     reference_asl = reference_asl if reference_asl else atoms_asl
     origin_asl = origin_asl if origin_asl else atoms_asl
 
@@ -398,8 +435,7 @@ def translate(x, y, z, w=0, atoms_asl='all', reference_asl='', origin_asl='', ab
 
     origin_atoms = maestro.analyze.get_atoms_from_asl(ws, origin_asl)
     origin_indexes = [a.index for a in origin_atoms]
-    origin_com = maestro.analyze.center_of_mass(
-        ws, atom_indices=origin_indexes)
+    origin_com = maestro.analyze.center_of_mass(ws, atom_indices=origin_indexes)
 
     if absolute:
         reference_com = np.array([0, 0, 0])
@@ -407,24 +443,35 @@ def translate(x, y, z, w=0, atoms_asl='all', reference_asl='', origin_asl='', ab
         reference_atoms = maestro.analyze.get_atoms_from_asl(ws, reference_asl)
         reference_indexes = [a.index for a in reference_atoms]
         reference_com = maestro.analyze.center_of_mass(
-            ws, atom_indices=reference_indexes)
+            ws, atom_indices=reference_indexes
+        )
 
     T = np.array([x, y, z])
     if from_asl:
         u = get_axis(ws, from_asl, to_asl)
         T = T + w * u
 
-    maestro.command('beginundoblock ')
+    maestro.command("beginundoblock ")
 
     for at in atoms:
         at.xyz = np.array(at.xyz) + T + (reference_com - origin_com)
 
     maestro.workspace_set(ws)
 
-    maestro.command('endundoblock ')
+    maestro.command("endundoblock ")
 
 
-def rotate(x, y, z, w=0, atoms_asl='all', reference_asl='', absolute=False, from_asl='', to_asl=''):
+def rotate(
+    x,
+    y,
+    z,
+    w=0,
+    atoms_asl="all",
+    reference_asl="",
+    absolute=False,
+    from_asl="",
+    to_asl="",
+):
     x = x / 57.29578
     y = y / 57.29578
     z = z / 57.29578
@@ -440,8 +487,7 @@ def rotate(x, y, z, w=0, atoms_asl='all', reference_asl='', absolute=False, from
     else:
         reference_atoms = maestro.analyze.get_atoms_from_asl(ws, reference_asl)
         reference_indexes = [a.index for a in reference_atoms]
-        com = maestro.analyze.center_of_mass(
-            ws, atom_indices=reference_indexes)
+        com = maestro.analyze.center_of_mass(ws, atom_indices=reference_indexes)
 
     R = get_rotation_matrix(x, y, z)
 
@@ -449,7 +495,7 @@ def rotate(x, y, z, w=0, atoms_asl='all', reference_asl='', absolute=False, from
         u = get_axis(ws, from_asl, to_asl)
         R = get_rotation_matrix_along_axis(w, u).dot(R)
 
-    maestro.command('beginundoblock ')
+    maestro.command("beginundoblock ")
 
     for at in atoms:
         zero = np.array(at.xyz) - com
@@ -457,7 +503,7 @@ def rotate(x, y, z, w=0, atoms_asl='all', reference_asl='', absolute=False, from
 
     maestro.workspace_set(ws)
 
-    maestro.command('endundoblock ')
+    maestro.command("endundoblock ")
 
 
 def get_rotation_matrix(x, y, z):
@@ -467,15 +513,9 @@ def get_rotation_matrix(x, y, z):
     siny = np.sin(y)
     cosz = np.cos(z)
     sinz = np.sin(z)
-    Rx = np.array([[1, 0, 0],
-                   [0, cosx, -sinx],
-                   [0, sinx, cosx]])
-    Ry = np.array([[cosy, 0, siny],
-                   [0, 1, 0],
-                   [-siny, 0, cosy]])
-    Rz = np.array([[cosz, -sinz, 0],
-                   [sinz, cosz, 0],
-                   [0, 0, 1]])
+    Rx = np.array([[1, 0, 0], [0, cosx, -sinx], [0, sinx, cosx]])
+    Ry = np.array([[cosy, 0, siny], [0, 1, 0], [-siny, 0, cosy]])
+    Rz = np.array([[cosz, -sinz, 0], [sinz, cosz, 0], [0, 0, 1]])
     R = Rz.dot(Ry).dot(Rx)
 
     return R
@@ -483,15 +523,25 @@ def get_rotation_matrix(x, y, z):
 
 def get_rotation_matrix_along_axis(theta, u):
     ux, uy, uz = u
-    R = np.array([[np.cos(theta) + ux**2 * (1 - np.cos(theta)),
-                   ux * uy * (1 - np.cos(theta)) - uz * np.sin(theta),
-                   ux * uz * (1 - np.cos(theta)) + uy * np.sin(theta)],
-                  [uy * ux * (1 - np.cos(theta)) + uz * np.sin(theta),
-                   np.cos(theta) + uy**2 * (1 - np.cos(theta)),
-                   uy * uz * (1 - np.cos(theta)) - ux * np.sin(theta)],
-                  [uz * ux * (1 - np.cos(theta)) - uy * np.sin(theta),
-                   uz * uy * (1 - np.cos(theta)) + ux * np.sin(theta),
-                   np.cos(theta) + uz**2 * (1 - np.cos(theta))]])
+    R = np.array(
+        [
+            [
+                np.cos(theta) + ux**2 * (1 - np.cos(theta)),
+                ux * uy * (1 - np.cos(theta)) - uz * np.sin(theta),
+                ux * uz * (1 - np.cos(theta)) + uy * np.sin(theta),
+            ],
+            [
+                uy * ux * (1 - np.cos(theta)) + uz * np.sin(theta),
+                np.cos(theta) + uy**2 * (1 - np.cos(theta)),
+                uy * uz * (1 - np.cos(theta)) - ux * np.sin(theta),
+            ],
+            [
+                uz * ux * (1 - np.cos(theta)) - uy * np.sin(theta),
+                uz * uy * (1 - np.cos(theta)) + ux * np.sin(theta),
+                np.cos(theta) + uz**2 * (1 - np.cos(theta)),
+            ],
+        ]
+    )
     return R
 
 

@@ -107,6 +107,7 @@ def key2asl(key):
 
 def color_atoms(data: dict, cmap):
     from schrodinger import maestro
+
     ws = maestro.workspace_get()
 
     vmin = min(data.values())
@@ -136,4 +137,4 @@ def parse_residue_interaction_energies_and_color_residues(filename, cmap="Greens
 #     m = []
 #     for res in st.residue:
 #         m.append(np.mean([a.property['r_psp_MMGBSA_dG_Bind'] for a in res.atom]))
-#     return m 
+#     return m
