@@ -8,6 +8,7 @@ Place a dummy atom at the center of mass of selected atoms.
 #Command: pythonrun maestro_dummy_at_center_of_mass.dummy_center_of_mass
 
 from schrodinger import maestro
+from schrodinger.structutils import analyze
 
 
 def dummy_center_of_mass():
@@ -22,10 +23,10 @@ def dummy_center_of_mass():
     sel = maestro.selected_atoms_get()
 
     # get center of mass of selected atoms
-    com = maestro.analyze.center_of_mass(st, atom_indices=list(sel))
+    com = analyze.center_of_mass(st, atom_indices=list(sel))
     # create dummy atom at com coordinates
-    dummySt = maestro.analyze.create_new_structure()
-    dummySt.addAtom("P", com[0], com[1], com[2], atom_type=150)
+    dummySt = analyze.create_new_structure()
+    dummySt.addAtom("P", *com, atom_type=150)
 
     # add dummy atom to pt and include dummy atom in workspace
     pt = maestro.project_table_get()
@@ -34,7 +35,7 @@ def dummy_center_of_mass():
     pt.includeRows([int(row.entry_id)], exclude_others=False)
 
     # set sphere representation for dummy atom
-    maestro.command('repatom rep=cpk entry.id ' + row.entry_id)
+    maestro.command(f'repatom rep=cpk entry.id {row.entry_id}')
 
 
 if __name__ == "__main__":
