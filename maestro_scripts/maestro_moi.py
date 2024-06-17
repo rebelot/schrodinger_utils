@@ -22,8 +22,8 @@ from schrodinger.structutils import analyze
 class App(QWidget):
     def __init__(self):
         super().__init__()
-        self.axes = None
-        self.labels = None
+        self.axes = []
+        self.labels = []
         self.generate_ui()
 
     def generate_ui(self):
@@ -39,11 +39,15 @@ class App(QWidget):
         self.show()
 
     def on_clicked_gen_button(self):
-        self.axes, self.labels = draw()
+        axes, labels = draw()
+        self.axes.append(axes)
+        self.labels.append(labels)
 
     def on_clicked_del_button(self):
-        self.axes.hide()
-        for lab in self.labels:
+        if not self.axes:
+            return
+        self.axes.pop().hide()
+        for lab in self.labels.pop():
             maestro.remove_object(lab)
 
 
