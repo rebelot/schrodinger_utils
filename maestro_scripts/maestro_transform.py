@@ -8,6 +8,7 @@ Rotate along specified axis
 
 import numpy as np
 from schrodinger import maestro
+from schrodinger.structutils.analyze import get_atoms_from_asl, center_of_mass
 from schrodinger.Qt import PyQt6
 from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import (
@@ -391,7 +392,7 @@ class App(QWidget):
         ws = maestro.workspace_get()
         sel = list(maestro.selected_atoms_get())
         if len(sel) > 0:
-            com = maestro.analyze.center_of_mass(ws, atom_indices=sel)
+            com = center_of_mass(ws, atom_indices=sel)
             self.xle.setText(str(com[0]))
             self.yle.setText(str(com[1]))
             self.zle.setText(str(com[2]))
@@ -431,20 +432,18 @@ def translate(
     origin_asl = origin_asl if origin_asl else atoms_asl
 
     ws = maestro.workspace_get()
-    atoms = maestro.analyze.get_atoms_from_asl(ws, atoms_asl)
+    atoms = get_atoms_from_asl(ws, atoms_asl)
 
-    origin_atoms = maestro.analyze.get_atoms_from_asl(ws, origin_asl)
+    origin_atoms = get_atoms_from_asl(ws, origin_asl)
     origin_indexes = [a.index for a in origin_atoms]
-    origin_com = maestro.analyze.center_of_mass(ws, atom_indices=origin_indexes)
+    origin_com = center_of_mass(ws, atom_indices=origin_indexes)
 
     if absolute:
         reference_com = np.array([0, 0, 0])
     else:
-        reference_atoms = maestro.analyze.get_atoms_from_asl(ws, reference_asl)
+        reference_atoms = get_atoms_from_asl(ws, reference_asl)
         reference_indexes = [a.index for a in reference_atoms]
-        reference_com = maestro.analyze.center_of_mass(
-            ws, atom_indices=reference_indexes
-        )
+        reference_com = center_of_mass(ws, atom_indices=reference_indexes)
 
     T = np.array([x, y, z])
     if from_asl:
@@ -480,14 +479,14 @@ def rotate(
     reference_asl = reference_asl if reference_asl else atoms_asl
 
     ws = maestro.workspace_get()
-    atoms = maestro.analyze.get_atoms_from_asl(ws, atoms_asl)
+    atoms = get_atoms_from_asl(ws, atoms_asl)
 
     if absolute:
         com = np.array([0, 0, 0])
     else:
-        reference_atoms = maestro.analyze.get_atoms_from_asl(ws, reference_asl)
+        reference_atoms = get_atoms_from_asl(ws, reference_asl)
         reference_indexes = [a.index for a in reference_atoms]
-        com = maestro.analyze.center_of_mass(ws, atom_indices=reference_indexes)
+        com = center_of_mass(ws, atom_indices=reference_indexes)
 
     R = get_rotation_matrix(x, y, z)
 
@@ -552,12 +551,12 @@ def get_unit_vector(a, b):
 
 
 def get_axis(ws, asl_a, asl_b):
-    atoms_a = maestro.analyze.get_atoms_from_asl(ws, asl_a)
-    atoms_b = maestro.analyze.get_atoms_from_asl(ws, asl_b)
+    atoms_a = get_atoms_from_asl(ws, asl_a)
+    atoms_b = get_atoms_from_asl(ws, asl_b)
     index_a = [a.index for a in atoms_a]
     index_b = [a.index for a in atoms_b]
-    com_a = maestro.analyze.center_of_mass(ws, atom_indices=index_a)
-    com_b = maestro.analyze.center_of_mass(ws, atom_indices=index_b)
+    com_a = center_of_mass(ws, atom_indices=index_a)
+    com_b = center_of_mass(ws, atom_indices=index_b)
 
     u = get_unit_vector(com_a, com_b)
     return u
