@@ -40,7 +40,8 @@ def main():
 
     else:
         print('generating distance matrix (RMSD)')
-        fit_aids = cms.select_atom(args.fit)
+        fit_asl = args.fit if args.fit else args.rmsd
+        fit_aids = cms.select_atom(fit_asl)
         fit_gids = topo.aids2gids(cms, fit_aids, include_pseudoatoms=False)
         rmsd_matrix = analysis.rmsd_matrix(msys, trj, rmsd_gids, fit_gids)
 
