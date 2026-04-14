@@ -37,7 +37,10 @@ def main():
             [100 * sse[sse > 0].sum() / ss.shape[1] for sse in ss],
         )
         ax[0].set_ylabel("SSE %")
-        ax[1].pcolormesh([fr.time for fr in trj], [int(r[6:]) for r in rkey], ss.T)
+        rkey_nums = np.array([int(r[6:]) for r in rkey])
+        res_idx = list(range(len(rkey_nums)))
+        ax[1].pcolormesh([fr.time for fr in trj], res_idx, ss.T)
+        ax[1].set_yticks(res_idx, labels=rkey_nums)
         ax[1].set_xlabel("time (ps)")
         ax[1].set_ylabel("residue nr.")
         plt.savefig(args.out + ".png")
