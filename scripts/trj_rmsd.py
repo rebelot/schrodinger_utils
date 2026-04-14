@@ -108,12 +108,10 @@ def main():
             plt.xlabel("time (ns)")
         else:  # assume RMSF
             plt.plot(res)
-            n = np.linspace(0, len(res), 10)
-            plt.xticks(
-                n,
-                [a.resnum for a in rmsd_Atoms[:: int(len(res) / 10)]],
-                rotation="vertical",
-            )
+            step = max(1, int(len(res) / 10))
+            tick_indices = list(range(0, len(res), step))
+            tick_labels = [rmsd_Atoms[i].resnum for i in tick_indices]
+            plt.xticks(tick_indices, tick_labels, rotation="vertical")
             plt.xlabel("atom index")
         plt.ylabel(f"{mode.upper()} (Å)")
         plt.savefig(out)
